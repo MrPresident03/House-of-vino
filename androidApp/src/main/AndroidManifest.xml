@@ -2,9 +2,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- Sync with the user's own Supabase project and barcode lookups. -->
+    <!-- Barcode lookups (Open Food Facts). Household sync is file-based and needs no network permission of its own. -->
     <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <!-- Barcode and label scanning; requested only when the user opens the scanner. -->
     <uses-permission android:name="android.permission.CAMERA" />
     <!-- Drinking-window reminders; requested only when the user turns them on. -->

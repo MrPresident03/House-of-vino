@@ -22,10 +22,4 @@ class MainActivity : ComponentActivity() {
         hvApp.platform.attach(this)
         setContent { App(hvApp.graph) }
     }
-
-    override fun onStop() {
-        super.onStop()
-        // Push anything still queued once the user leaves the app.
-        hvApp.platform.requestBackgroundSync()
-    }
 }

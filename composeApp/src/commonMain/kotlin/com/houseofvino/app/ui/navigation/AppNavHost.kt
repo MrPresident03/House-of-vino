@@ -27,16 +27,17 @@ import com.houseofvino.app.ui.locations.LocationEditorScreen
 import com.houseofvino.app.ui.locations.LocationsScreen
 import com.houseofvino.app.ui.scan.ScanScreen
 import com.houseofvino.app.ui.search.SearchScreen
-import com.houseofvino.app.ui.settings.AccountScreen
-import com.houseofvino.app.ui.settings.DeleteAccountScreen
+import com.houseofvino.app.ui.settings.ConflictsScreen
+import com.houseofvino.app.ui.settings.EraseScreen
 import com.houseofvino.app.ui.settings.FirstRunScreen
-import com.houseofvino.app.ui.settings.HouseholdScreen
 import com.houseofvino.app.ui.settings.MoreScreen
 import com.houseofvino.app.ui.settings.PickWineScreen
 import com.houseofvino.app.ui.settings.PrivacyScreen
 import com.houseofvino.app.ui.settings.RatesScreen
 import com.houseofvino.app.ui.settings.SettingsScreen
-import com.houseofvino.app.ui.settings.SyncStatusScreen
+import com.houseofvino.app.ui.sharing.InviteScreen
+import com.houseofvino.app.ui.sharing.JoinScreen
+import com.houseofvino.app.ui.sharing.SharingScreen
 import com.houseofvino.app.ui.wishlist.WishlistDetailScreen
 import com.houseofvino.app.ui.wishlist.WishlistEditorScreen
 import com.houseofvino.app.ui.wishlist.WishlistScreen
@@ -55,7 +56,7 @@ fun AppNavHost(nav: NavHostController, start: Any, modifier: Modifier = Modifier
         composable<FirstRunRoute> {
             FirstRunScreen(
                 onDone = { nav.navigate(CellarRoute) { popUpTo<FirstRunRoute> { inclusive = true } } },
-                onSignIn = { nav.navigate(CellarRoute) { popUpTo<FirstRunRoute> { inclusive = true } }; nav.navigate(AccountRoute) },
+                onJoin = { nav.navigate(CellarRoute) { popUpTo<FirstRunRoute> { inclusive = true } }; nav.navigate(JoinRoute) },
             )
         }
 
@@ -81,7 +82,7 @@ fun AppNavHost(nav: NavHostController, start: Any, modifier: Modifier = Modifier
             MoreScreen(
                 onLocations = { nav.navigate(LocationsRoute) }, onInsights = { nav.navigate(InsightsRoute) },
                 onImport = { nav.navigate(ImportRoute) }, onExport = { nav.navigate(ExportRoute) },
-                onSync = { nav.navigate(SyncStatusRoute) }, onSettings = { nav.navigate(SettingsRoute) },
+                onSharing = { nav.navigate(SharingRoute) }, onSettings = { nav.navigate(SettingsRoute) },
             )
         }
 
@@ -203,20 +204,26 @@ fun AppNavHost(nav: NavHostController, start: Any, modifier: Modifier = Modifier
         composable<InsightsRoute> { InsightsScreen(onBack = back) }
         composable<ImportRoute> { ImportScreen(onBack = back, onDone = { nav.navigate(CellarRoute) { popUpTo<CellarRoute> { inclusive = false } } }) }
         composable<ExportRoute> { ExportScreen(onBack = back) }
-        composable<SyncStatusRoute> { SyncStatusScreen(onBack = back, onOpenVintage = ::openVintage, onAccount = { nav.navigate(AccountRoute) }) }
+        composable<SharingRoute> {
+            SharingScreen(onBack = back, onInvite = { nav.navigate(InviteRoute) }, onJoin = { nav.navigate(JoinRoute) },
+                onConflicts = { nav.navigate(ConflictsRoute) })
+        }
+        composable<InviteRoute> { InviteScreen(onBack = back) }
+        composable<JoinRoute> {
+            JoinScreen(onBack = back, onJoined = { nav.navigate(SharingRoute) { popUpTo<JoinRoute> { inclusive = true } } })
+        }
+        composable<ConflictsRoute> { ConflictsScreen(onBack = back, onOpenVintage = ::openVintage) }
         composable<SettingsRoute> {
             SettingsScreen(
-                onBack = back, onAccount = { nav.navigate(AccountRoute) }, onHousehold = { nav.navigate(HouseholdRoute) },
+                onBack = back, onSharing = { nav.navigate(SharingRoute) },
                 onRates = { nav.navigate(RatesRoute) }, onPrivacy = { nav.navigate(PrivacyRoute) }, onExport = { nav.navigate(ExportRoute) },
-                onSync = { nav.navigate(SyncStatusRoute) }, onDeleteAccount = { nav.navigate(DeleteAccountRoute) },
+                onConflicts = { nav.navigate(ConflictsRoute) }, onErase = { nav.navigate(EraseRoute) },
             )
         }
-        composable<AccountRoute> { AccountScreen(onBack = back) }
-        composable<HouseholdRoute> { HouseholdScreen(onBack = back) }
         composable<RatesRoute> { RatesScreen(onBack = back) }
         composable<PrivacyRoute> { PrivacyScreen(onBack = back) }
-        composable<DeleteAccountRoute> {
-            DeleteAccountScreen(onBack = back, onExport = { nav.navigate(ExportRoute) }, onDeleted = {
+        composable<EraseRoute> {
+            EraseScreen(onBack = back, onExport = { nav.navigate(ExportRoute) }, onErased = {
                 nav.navigate(FirstRunRoute) { popUpTo(0) { inclusive = true } }
             })
         }

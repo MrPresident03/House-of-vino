@@ -47,7 +47,6 @@ import com.houseofvino.core.money.CurrencyCode
 import com.houseofvino.core.money.ExchangeRate
 import com.houseofvino.core.time.DateOrder
 import com.houseofvino.core.time.IsoDate
-import com.houseofvino.data.remote.Membership
 import com.houseofvino.data.repo.SettingsRepository
 import com.houseofvino.data.repo.ThemePreference
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -59,15 +58,15 @@ import kotlinx.coroutines.launch
 // More tab
 
 @Composable
-fun MoreScreen(onLocations: () -> Unit, onInsights: () -> Unit, onImport: () -> Unit, onExport: () -> Unit, onSync: () -> Unit, onSettings: () -> Unit) {
+fun MoreScreen(onLocations: () -> Unit, onInsights: () -> Unit, onImport: () -> Unit, onExport: () -> Unit, onSharing: () -> Unit, onSettings: () -> Unit) {
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
         HvTopBar("More")
         NavRow("Locations", "Cellars, fridges, racks and bottle positions", onLocations)
         NavRow("Insights", "Totals, value, drinking windows and trends", onInsights)
         NavRow("Import", "Bring in a CSV from another app", onImport)
         NavRow("Export", "Inventory, tasting history and financial records", onExport)
-        NavRow("Sync", "Status, pending changes and conflicts", onSync)
-        NavRow("Settings", "Account, household, currency, privacy", onSettings)
+        NavRow("Sharing", "Keep one cellar with a partner's phone", onSharing)
+        NavRow("Settings", "Currency, appearance, privacy", onSettings)
     }
 }
 
@@ -100,8 +99,8 @@ class SettingsViewModel(graph: AppGraph) : GraphViewModel(graph) {
 
 @Composable
 fun SettingsScreen(
-    onBack: () -> Unit, onAccount: () -> Unit, onHousehold: () -> Unit, onRates: () -> Unit, onPrivacy: () -> Unit,
-    onExport: () -> Unit, onSync: () -> Unit, onDeleteAccount: () -> Unit,
+    onBack: () -> Unit, onSharing: () -> Unit, onRates: () -> Unit, onPrivacy: () -> Unit,
+    onExport: () -> Unit, onConflicts: () -> Unit, onErase: () -> Unit,
 ) {
     val graph = appGraph()
     val vm = viewModel { SettingsViewModel(graph) }
@@ -109,11 +108,8 @@ fun SettingsScreen(
     Column(Modifier.fillMaxSize()) {
         HvTopBar("Settings", onBack = onBack)
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
-            SectionHeader("Account")
-            val signedIn = graph.account?.currentUser()
-            NavRow(if (signedIn != null) "Signed in as ${signedIn.email ?: "you"}" else "Sign in to sync",
-                if (graph.account == null) "Sync isn't set up in this build; everything stays on this device." else "Back up and use on other devices", onAccount)
-            if (graph.account != null) NavRow("Household", "Share your cellar with family or a partner", onHousehold)
+            SectionHeader("Sharing")
+            NavRow("Share with a partner", "No account or server needed", onSharing)
 
             SectionHeader("Preferences")
             Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -144,151 +140,9 @@ fun SettingsScreen(
             NavRow("Backup and export",
                 if (graph.platform.platformName == "Android") "Phone backups don't include your cellar. Download it as CSV" else "Download all your data as CSV",
                 onExport)
-            NavRow("Sync status", null, onSync)
-            if (graph.account != null) NavRow("Delete account", "Permanently delete your account and synced data", onDeleteAccount, danger = true)
+            NavRow("Changed on both phones", "Review edits made on two phones at once", onConflicts)
+            NavRow("Erase this phone", "Delete everything stored on this phone", onErase, danger = true)
             Text("House of Vino ${graph.platform.appVersion}", style = Hv.type.caption, color = Hv.colors.inkMuted, modifier = Modifier.padding(16.dp))
-        }
-    }
-}
-
-// =================================================================================================
-// Account: sign in / sign out
-
-class AccountViewModel(graph: AppGraph) : GraphViewModel(graph) {
-    val email = MutableStateFlow("")
-    val password = MutableStateFlow("")
-    val code = MutableStateFlow("")
-    val codeSent = MutableStateFlow(false)
-    val busy = MutableStateFlow(false)
-    private val _error = MutableStateFlow<String?>(null)
-    val error: StateFlow<String?> = _error.asStateFlow()
-
-    private fun run(block: suspend () -> Unit) {
-        busy.value = true; _error.value = null
-        launchIo(onError = { e -> busy.value = false; _error.value = e.userMessage() }) { block(); busy.value = false }
-    }
-
-    fun signIn() = run { graph.account!!.signIn(email.value, password.value); messenger.show("Signed in. Syncing…"); graph.sync.syncNow() }
-    fun signUp() = run { graph.account!!.signUp(email.value, password.value); messenger.show("Check your email to confirm your account") }
-    fun sendCode() = run { graph.account!!.sendCode(email.value); codeSent.value = true }
-    fun verifyCode() = run { graph.account!!.verifyCode(email.value, code.value); messenger.show("Signed in. Syncing…"); graph.sync.syncNow() }
-    fun signOut() = run { graph.account!!.signOut(); messenger.show("Signed out. Your cellar stays on this device.") }
-}
-
-@Composable
-fun AccountScreen(onBack: () -> Unit) {
-    val graph = appGraph()
-    val vm = viewModel { AccountViewModel(graph) }
-    val email by vm.email.collectAsState()
-    val password by vm.password.collectAsState()
-    val code by vm.code.collectAsState()
-    val codeSent by vm.codeSent.collectAsState()
-    val busy by vm.busy.collectAsState()
-    val error by vm.error.collectAsState()
-    val sync by graph.sync.state.collectAsState()
-    var usePassword by remember { mutableStateOf(false) }
-    Column(Modifier.fillMaxSize()) {
-        HvTopBar("Account", onBack = onBack)
-        Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).imePadding().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            if (graph.account == null) {
-                Text("This build has no sync server configured, so everything is stored only on this device. Export regularly to keep a backup.",
-                    style = Hv.type.body, color = Hv.colors.ink)
-                return@Column
-            }
-            val user = graph.account.currentUser()
-            if (user != null && sync.signedIn) {
-                Text("Signed in as ${user.email}", style = Hv.type.body, color = Hv.colors.ink)
-                HvButton("Sync now", { graph.scope.launch { graph.sync.syncNow() } }, Modifier.fillMaxWidth(), kind = ButtonKind.SECONDARY, icon = HvIcons.Sync)
-                HvButton("Sign out", vm::signOut, Modifier.fillMaxWidth(), kind = ButtonKind.QUIET, enabled = !busy)
-                Text("Signing out keeps your cellar on this device. Changes made while signed out sync next time you sign in.",
-                    style = Hv.type.caption, color = Hv.colors.inkMuted)
-                return@Column
-            }
-            Text("Sign in to back up your cellar and use it on your other devices. You can keep using the app without an account.",
-                style = Hv.type.body, color = Hv.colors.ink)
-            HvTextField(email, { vm.email.value = it }, "Email", keyboard = KeyboardType.Email)
-            if (usePassword) {
-                androidx.compose.material3.TextField(password, { vm.password.value = it }, label = { Text("Password") },
-                    visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth(), singleLine = true)
-                HvButton("Sign in", vm::signIn, Modifier.fillMaxWidth(), enabled = !busy && email.isNotBlank() && password.length >= 8)
-                HvButton("Create account", vm::signUp, Modifier.fillMaxWidth(), kind = ButtonKind.SECONDARY, enabled = !busy && email.isNotBlank() && password.length >= 8)
-                Text("Passwords need at least 8 characters.", style = Hv.type.caption, color = Hv.colors.inkMuted)
-            } else if (!codeSent) {
-                HvButton("Email me a sign-in code", vm::sendCode, Modifier.fillMaxWidth(), enabled = !busy && email.contains('@'))
-            } else {
-                HvTextField(code, { vm.code.value = it.filter(Char::isDigit).take(8) }, "Code from the email", keyboard = KeyboardType.Number)
-                HvButton("Sign in", vm::verifyCode, Modifier.fillMaxWidth(), enabled = !busy && code.length >= 6)
-            }
-            TextButton(onClick = { usePassword = !usePassword }) { Text(if (usePassword) "Use an email code instead" else "Use a password instead") }
-            error?.let { Text(it, color = Hv.colors.danger, style = Hv.type.bodyDense) }
-        }
-    }
-}
-
-// =================================================================================================
-// Household
-
-class HouseholdViewModel(graph: AppGraph) : GraphViewModel(graph) {
-    private val _members = MutableStateFlow<List<Membership>>(emptyList())
-    val members: StateFlow<List<Membership>> = _members.asStateFlow()
-    val inviteEmail = MutableStateFlow("")
-    val inviteRole = MutableStateFlow("editor")
-    val token = MutableStateFlow<String?>(null)
-    val acceptToken = MutableStateFlow("")
-    private val _error = MutableStateFlow<String?>(null)
-    val error: StateFlow<String?> = _error.asStateFlow()
-
-    init { refresh() }
-
-    fun refresh() = launchIo(onError = { _error.value = it.userMessage() }) { _members.value = graph.account?.memberships().orEmpty() }
-
-    fun invite() = launchIo(onError = { _error.value = it.userMessage() }) {
-        token.value = graph.account!!.invite(collectionId, inviteEmail.value, inviteRole.value)
-    }
-
-    fun accept() = launchIo(onError = { _error.value = it.userMessage() }) {
-        val cid = graph.account!!.acceptInvite(acceptToken.value)
-        messenger.show("You've joined the household. Its wines will appear after the next sync.")
-        io { graph.settings.put("joined_collection_$cid", "true") }
-        refresh()
-    }
-}
-
-@Composable
-fun HouseholdScreen(onBack: () -> Unit) {
-    val graph = appGraph()
-    val vm = viewModel { HouseholdViewModel(graph) }
-    val members by vm.members.collectAsState()
-    val email by vm.inviteEmail.collectAsState()
-    val role by vm.inviteRole.collectAsState()
-    val token by vm.token.collectAsState()
-    val accept by vm.acceptToken.collectAsState()
-    val error by vm.error.collectAsState()
-    Column(Modifier.fillMaxSize()) {
-        HvTopBar("Household", onBack = onBack)
-        Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).imePadding().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            if (graph.account?.currentUser() == null) {
-                Text("Sign in first to share your cellar.", style = Hv.type.body, color = Hv.colors.ink)
-                return@Column
-            }
-            Text("Your collections", style = Hv.type.sectionTitle, color = Hv.colors.ink)
-            members.forEach { m -> Text("${m.name} · ${m.role}", style = Hv.type.body, color = Hv.colors.ink) }
-            SectionHeader("Invite someone", Modifier.padding(start = 0.dp))
-            Text("Editors can add and drink bottles; viewers can only look. Invites expire after 7 days and only work for the email you enter.",
-                style = Hv.type.bodyDense, color = Hv.colors.inkMuted)
-            HvTextField(email, { vm.inviteEmail.value = it }, "Their email", keyboard = KeyboardType.Email)
-            ChoiceChips(listOf("editor", "viewer"), setOf(role), { if (it == "editor") "Editor" else "Viewer" }, { vm.inviteRole.value = it })
-            HvButton("Create invite", vm::invite, Modifier.fillMaxWidth(), enabled = email.contains('@'))
-            token?.let {
-                Text("Send them this invite code. It is shown only once:", style = Hv.type.bodyDense, color = Hv.colors.ink)
-                Text(it, style = Hv.type.figure, color = Hv.colors.accent)
-                HvButton("Share code", { graph.scope.launch { graph.platform.shareText("house-of-vino-invite.txt", "text/plain", "Join my cellar on House of Vino with this code: $it") } },
-                    kind = ButtonKind.SECONDARY)
-            }
-            SectionHeader("Join a household", Modifier.padding(start = 0.dp))
-            HvTextField(accept, { vm.acceptToken.value = it.trim() }, "Invite code")
-            HvButton("Join", vm::accept, Modifier.fillMaxWidth(), kind = ButtonKind.SECONDARY, enabled = accept.length >= 32)
-            error?.let { Text(it, color = Hv.colors.danger, style = Hv.type.bodyDense) }
         }
     }
 }
@@ -373,16 +227,16 @@ fun PrivacyScreen(onBack: () -> Unit) {
     Column(Modifier.fillMaxSize()) {
         HvTopBar("Privacy", onBack = onBack)
         Column(Modifier.verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            P("Your cellar is stored on this device first. Nothing leaves it unless you sign in.")
-            P("When you sign in, your data is synced to a private database. Only you, and people you invite to your household, can read it. This is enforced by the server, not just the app.")
+            P("Your cellar is stored on this phone. There's no account, and House of Vino has no server: nothing is uploaded to us.")
+            P("If you share with a partner, changes travel as files you send yourself. Each file is encrypted with a key that only your paired phones have, so the apps or services that carry it can't read it.")
             P("Label photos are read on your device. Text recognition doesn't send images anywhere.")
             if (android) {
                 P("The scanner uses Google ML Kit, which runs on your device. ML Kit may send Google technical diagnostics (device and app details, how the scanner performed). It doesn't send camera images or the text it reads.")
             }
             P("Barcode lookups send only the barcode number to Open Food Facts, an open product database. Online discovery sends your search words to the same service.")
-            P("Photos you attach are uploaded to private storage when you're signed in, and are visible only to your household.")
+            P("Photos you attach stay on this phone, and travel to your partner's phone inside the encrypted files if you choose to include them.")
             P("The app has no advertising and no analytics of its own.")
-            P("You can export everything at any time, and deleting your account permanently removes your synced data.")
+            P("You can export everything at any time, and Erase this phone deletes it from this phone.")
         }
     }
 }
@@ -390,41 +244,35 @@ fun PrivacyScreen(onBack: () -> Unit) {
 @Composable private fun P(text: String) = Text(text, style = Hv.type.body, color = Hv.colors.ink)
 
 // =================================================================================================
-// Delete account
+// Erase this phone
 
 @Composable
-fun DeleteAccountScreen(onBack: () -> Unit, onExport: () -> Unit, onDeleted: () -> Unit) {
+fun EraseScreen(onBack: () -> Unit, onExport: () -> Unit, onErased: () -> Unit) {
     val graph = appGraph()
     var phrase by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
-    var error by remember { mutableStateOf<String?>(null) }
-    var wipeLocal by remember { mutableStateOf(true) }
+    val shared = remember { graph.household.info(graph.collectionId)?.activePeers?.isNotEmpty() == true }
     val scope = rememberCoroutineScope()
     Column(Modifier.fillMaxSize()) {
-        HvTopBar("Delete account", onBack = onBack)
+        HvTopBar("Erase this phone", onBack = onBack)
         Column(Modifier.verticalScroll(rememberScrollState()).imePadding().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text("This permanently deletes your account, every collection you own (including shared households), their photos and history. It can't be undone.",
+            Text("This deletes the cellar, tasting notes, photos and history stored on this phone. It can't be undone.",
                 style = Hv.type.body, color = Hv.colors.ink)
-            Text("People you've shared a household with lose access to it. Households you joined are not affected.", style = Hv.type.bodyDense, color = Hv.colors.inkMuted)
+            Text(
+                if (shared) "Your partner's phone keeps its copy. To carry on sharing after erasing, join again with a new invite."
+                else "Nothing is stored anywhere else, so export first if you might want it back.",
+                style = Hv.type.bodyDense, color = Hv.colors.inkMuted,
+            )
             HvButton("Export my data first", onExport, Modifier.fillMaxWidth(), kind = ButtonKind.SECONDARY)
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Also erase this device's copy", style = Hv.type.body, color = Hv.colors.ink, modifier = Modifier.weight(1f))
-                Switch(wipeLocal, { wipeLocal = it })
-            }
-            HvTextField(phrase, { phrase = it }, "Type DELETE to confirm")
-            error?.let { Text(it, color = Hv.colors.danger, style = Hv.type.bodyDense) }
-            HvButton(if (busy) "Deleting…" else "Delete my account", {
-                busy = true; error = null
+            HvTextField(phrase, { phrase = it }, "Type ERASE to confirm")
+            HvButton(if (busy) "Erasing…" else "Erase this phone", {
+                busy = true
                 scope.launch {
-                    try {
-                        graph.account!!.deleteAccount()
-                        if (wipeLocal) graph.wipeLocalData()
-                        onDeleted()
-                    } catch (e: Exception) {
-                        error = "Couldn't delete the account. ${e.userMessage()} You need to be online; nothing was deleted on this device."
-                    } finally { busy = false }
+                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { graph.wipeLocalData() }
+                    busy = false
+                    onErased()
                 }
-            }, Modifier.fillMaxWidth(), kind = ButtonKind.DESTRUCTIVE, enabled = phrase == "DELETE" && !busy)
+            }, Modifier.fillMaxWidth(), kind = ButtonKind.DESTRUCTIVE, enabled = phrase.trim() == "ERASE" && !busy)
         }
     }
 }

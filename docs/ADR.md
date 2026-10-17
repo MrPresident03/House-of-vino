@@ -18,14 +18,13 @@ changes** are marked ⚑.
 | Android Gradle Plugin | 9.3.1 | 9.4.0 exists, but Kotlin 2.4.21's documented AGP range ends at 9.3.1 |
 | Gradle | 9.7.1 | Kotlin 2.4.21's documented Gradle range ends at 9.7.x |
 | SQLDelight | 2.4.1 | |
-| supabase-kt | 3.8.0 | built against Ktor 3.5.1, coroutines 1.11.0 |
-| Ktor | 3.5.1 | matches supabase-kt |
+| Ktor | 3.5.1 | HTTP client for the Open Food Facts lookup only |
 | kotlinx-coroutines / serialization / datetime | 1.11.0 / 1.11.0 / 0.8.0 | |
 | Navigation (JetBrains) | 2.9.2 | latest stable; 2.10 is still RC |
 | Lifecycle (JetBrains) | 2.11.0 | |
 | Coil | 3.6.3 | image loading |
 | CameraX / ML Kit barcode / ML Kit text | 1.6.2 / 17.3.0 / 16.0.1 | Android only, on-device |
-| WorkManager | 2.12.0 | Android background sync |
+| WorkManager | 2.12.0 | Android drinking-window reminders |
 
 - **Android minSdk 30 (Android 11)**. Android 11's platform SQLite (3.28) is the first with
   UPSERT and window functions. Supporting API 26–29 would need a bundled SQLite build.
@@ -39,13 +38,12 @@ changes** are marked ⚑.
 ```
 core/        pure Kotlin, stdlib only — domain model, money, inventory rules, text
              normalisation, fuzzy matching, CSV, search query model, insights maths
-data/        SQLDelight database, migrations, repositories, search engine, sync engine,
-             Supabase remote, photo storage
+data/        SQLDelight database, migrations, repositories, search engine, change journal,
+             households, sync files, conflict review
 composeApp/  Compose UI: design system, screens, view models, navigation, platform
              service interfaces; produces the iOS framework `ComposeApp`
-androidApp/  Android application shell, WorkManager, CameraX + ML Kit, FileProvider
-iosApp/      SwiftUI host, BGTaskScheduler registration
-supabase/    SQL migrations, RLS policies, RPC functions, Edge Function, SQL tests
+androidApp/  Android application shell, WorkManager reminders, FileProvider
+iosApp/      SwiftUI host, XcodeGen project
 ```
 
 - `core` has **no third-party dependencies**. Domain rules can be tested quickly on any
@@ -173,14 +171,15 @@ All external data sits behind replaceable interfaces in `data/integrations`:
 
 ## ADR-10 Verification
 
-- Local workspace: pure-Kotlin `core` tests run with the standalone compiler, and the
-  Supabase SQL plus RLS tests run on PostgreSQL 16 with a stub `auth` schema.
+- Local workspace: pure-Kotlin `core` tests (including crypto vectors, the QR encoder and the
+  merge rules) run with the standalone compiler; SQL is checked with SQLite `EXPLAIN`; QR
+  output is decoded with ZXing and compared with python-qrcode while developing.
 - CI (GitHub Actions, private repo ⚑ cost: uses the account's Actions minutes; macOS minutes
   bill at a multiplier):
-  - Linux: `./gradlew check` (core/data/composeApp JVM tests, Android unit tests, lint) +
-    `assembleDebug`.
-  - macOS: `iosSimulatorArm64Test` (runs the DB tests on the native SQLite driver) + XcodeGen +
-    `xcodebuild` for the simulator.
+  - Linux: `core`, `data` and `composeApp` JVM tests (DB tests on the JDBC SQLite driver,
+    multi-phone sync tests, Compose UI tests on desktop) + `assembleDebug`.
+  - macOS (opt-in with `[ios]`): `iosSimulatorArm64Test` (DB and sync tests on the native SQLite
+    driver) + XcodeGen + `xcodebuild` for the simulator.
   - A summary of every run is committed to the `ci-results` branch for review.
 - Real-device testing (spec §8) needs physical hardware and is listed as a manual release step.
 
@@ -189,10 +188,10 @@ All external data sits behind replaceable interfaces in `data/integrations`:
 - Android `allowBackup=false` and data-extraction rules exclude the database and photos from
   Google cloud backup and device-to-device transfer. iOS keeps the database in Application
   Support, which iCloud device backups include by default (the user controls iCloud Backup).
-- Backup is therefore an explicit choice: sign in (Supabase sync) or export CSV. A user who
-  does neither and loses their Android phone loses the cellar. The first-run screen says an
-  account is what backs up; Settings → "Backup and export" offers the CSV export, and on
-  Android also says that phone backups don't include the cellar.
+- Backup is therefore an explicit choice: share with a partner's phone (ADR-13), which holds
+  a full copy, or export CSV. A user who does neither and loses their Android phone loses the
+  cellar. Settings → "Backup and export" offers the CSV export, and on Android also says that
+  phone backups don't include the cellar. (Updated 2026-10-18 for ADR-13.)
 - Reason: the cellar holds purchase prices and values; copying it into a backup service the
   user never chose is a privacy decision we shouldn't make for them on Android, where backup
   is opt-out. Revisit if users ask for it.

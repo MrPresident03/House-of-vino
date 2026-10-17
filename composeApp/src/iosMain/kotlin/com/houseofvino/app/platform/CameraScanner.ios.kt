@@ -41,6 +41,7 @@ import platform.AVFoundation.AVMetadataMachineReadableCodeObject
 import platform.AVFoundation.AVMetadataObjectTypeCode128Code
 import platform.AVFoundation.AVMetadataObjectTypeEAN13Code
 import platform.AVFoundation.AVMetadataObjectTypeEAN8Code
+import platform.AVFoundation.AVMetadataObjectTypeQRCode
 import platform.AVFoundation.AVMetadataObjectTypeUPCECode
 import platform.AVFoundation.authorizationStatusForMediaType
 import platform.AVFoundation.fileDataRepresentation
@@ -139,9 +140,13 @@ private class ScannerController(
     private val session = AVCaptureSession()
     val view: UIView = CameraPreviewView(session)
     private var handled = false
+    private var lastValue: String? = null
     private val photoOutput = AVCapturePhotoOutput()
     private val metadataDelegate = MetadataDelegate { value, type ->
-        if (!handled) {
+        if (mode == ScanMode.QR) {
+            // Invites: report each different code, so a wrong one doesn't stop the scanner.
+            if (value != lastValue) { lastValue = value; onResult(ScanOutput.Barcode(value, symbology(type))) }
+        } else if (!handled) {
             handled = true
             onResult(ScanOutput.Barcode(value, symbology(type)))
         }
@@ -153,12 +158,12 @@ private class ScannerController(
         if (input == null) { onUnavailable(); return }
         session.beginConfiguration()
         if (session.canAddInput(input)) session.addInput(input)
-        if (mode == ScanMode.BARCODE) {
+        if (mode == ScanMode.BARCODE || mode == ScanMode.QR) {
             val output = AVCaptureMetadataOutput()
             if (session.canAddOutput(output)) {
                 session.addOutput(output)
                 output.setMetadataObjectsDelegate(metadataDelegate, dispatch_get_main_queue())
-                output.metadataObjectTypes = listOf(
+                output.metadataObjectTypes = if (mode == ScanMode.QR) listOf(AVMetadataObjectTypeQRCode) else listOf(
                     AVMetadataObjectTypeEAN13Code, AVMetadataObjectTypeEAN8Code, AVMetadataObjectTypeUPCECode, AVMetadataObjectTypeCode128Code,
                 )
             }
@@ -206,7 +211,7 @@ private class ScannerController(
 
     private fun symbology(type: String?) = when (type) {
         AVMetadataObjectTypeEAN13Code -> "EAN_13"; AVMetadataObjectTypeEAN8Code -> "EAN_8"
-        AVMetadataObjectTypeUPCECode -> "UPC_E"; AVMetadataObjectTypeCode128Code -> "CODE_128"; else -> "OTHER"
+        AVMetadataObjectTypeUPCECode -> "UPC_E"; AVMetadataObjectTypeCode128Code -> "CODE_128"; AVMetadataObjectTypeQRCode -> "QR"; else -> "OTHER"
     }
 }
 

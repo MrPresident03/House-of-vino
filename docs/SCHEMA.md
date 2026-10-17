@@ -1,15 +1,16 @@
 # Database schema
 
-The local SQLite schema (SQLDelight) and the server Postgres schema (Supabase) share table and
-column names. Each syncable row carries the same sync columns on both sides.
+The local SQLite schema (SQLDelight). Every phone in a household has the same synced tables;
+changes travel between phones through the change journal (docs/SYNC.md). There is no server
+schema.
 
 ## Conventions
 
-| Column | Type (local / server) | Meaning |
+| Column | Type | Meaning |
 |---|---|---|
-| `id` | TEXT / uuid | client-generated UUID v4, stable for life |
-| `collection_id` | TEXT / uuid | owning collection (personal or household) |
-| `created_at`, `updated_at` | INTEGER / bigint | epoch ms, client clock |
+| `id` | TEXT | client-generated UUID v4, stable for life |
+| `collection_id` | TEXT | owning collection (the household's id once shared) |
+| `created_at`, `updated_at` | INTEGER | epoch ms, client clock |
 | `deleted_at` | INTEGER / bigint NULL | tombstone; rows are never hard-deleted while syncing |
 | `rev` | INTEGER NULL / bigint | server revision; NULL locally until first sync |
 
@@ -129,37 +130,35 @@ saved_search(id, collection_id, name, scope, query TEXT, filters_json TEXT, sort
 ```
 recent_query(query TEXT, scope TEXT, used_at INTEGER)  PRIMARY KEY(query, scope)
 setting(key TEXT PRIMARY KEY, value TEXT)
-sync_outbox(seq INTEGER PK AUTOINCREMENT, op_id TEXT UNIQUE, entity TEXT, entity_id TEXT,
-            collection_id TEXT, base_rev INTEGER NULL, payload TEXT,   -- JSON row image
-            created_at, attempts INTEGER, next_attempt_at INTEGER, last_error TEXT NULL,
-            state ∈ {PENDING, IN_FLIGHT, FAILED_PERMANENT})
-sync_cursor(collection_id, entity, rev INTEGER)  PRIMARY KEY(collection_id, entity)
-sync_conflict(id, entity, entity_id, local_payload, server_payload, detected_at, resolved_at NULL)
+journal(seq PK AUTOINCREMENT, device_id, device_seq, hlc, collection_id, tbl, row_id,
+        body TEXT,   -- the change as sent on the wire (docs/SYNC.md)
+        received_at)  UNIQUE(device_id, device_seq)
+row_clock(tbl, row_id, state TEXT)   -- per-field {value, hlc} merge state  PRIMARY KEY(tbl, row_id)
+peer(device_id PK, collection_id, name, known_vector TEXT, first_seen_at, last_heard_at,
+     last_sent_at, removed_at NULL)
+household_key(key_id PK, collection_id, secret TEXT, created_at, retired_at NULL)
+              -- at most one current (retired_at NULL) key per collection
+sync_conflict(id, entity, entity_id, collection_id,
+              local_payload,    -- the values that lost (the other phone's)
+              server_payload,   -- the values every phone shows now
+              reason, detected_at, resolved_at NULL)
 search_fts      FTS4(doc_key, scope, producer, name, vintage, place, grapes, tags, notes)
 search_terms    fts4aux(search_fts)
 search_doc(doc_key TEXT PK, scope, entity_id, docid INTEGER)
 ```
 
-## Server-only tables
-
-```
-sync_applied_op(op_id uuid PK, user_id, collection_id, applied_at, result jsonb)
-```
-
-Server triggers on every syncable table:
-
-1. `before insert or update`: take `pg_advisory_xact_lock(collection)`, set `rev = nextval('sync_rev')`.
-2. `before update` on `movement`: always raise. (RLS also has no update/delete policy.)
+The `rev` column on synced tables is left over from the server design (schema v1) and is never
+synced. Migration 2 dropped `sync_outbox` and `sync_cursor`.
 
 ## Key indexes
 
 - `vintage(wine_id)`, `lot(vintage_id)`, `movement(lot_id)`, `movement(location_id)`, `stock_level(lot_id)`.
 - `tasting(vintage_id, tasted_on)`, `wishlist_item(status, priority)`.
-- `barcode(code)`, plus every `*(collection_id, rev)` used by pull.
+- `barcode(code)`, `journal(device_id, device_seq)`, `journal(hlc)`, `journal(tbl, row_id)`.
 
 ## Migrations
 
 - Local: `data/src/commonMain/sqldelight/com/houseofvino/data/db/N.sqm`. `DatabaseMigrationTest` runs
   1→latest and checks that the schema equals a fresh create.
-- Server: `supabase/migrations/YYYYMMDDHHMMSS_name.sql`, applied by `supabase db push`, and
-  tested locally with `supabase/tests/run.sh`.
+- On first open after an upgrade, rows written before the journal existed are journaled once,
+  so they reach a partner when the cellar is first shared.

@@ -18,7 +18,6 @@ class HouseOfVinoApp : Application(), Configuration.Provider {
 
     override fun onCreate() {
         super.onCreate()
-        if (platform.backend?.isConfigured == true) Work.schedulePeriodicSync(this)
         if (graph.settings.get(SettingsRepository.KEY_WINDOW_REMINDERS) == "true") Work.scheduleReminders(this)
     }
 }

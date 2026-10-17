@@ -49,11 +49,12 @@ import kotlinx.serialization.Serializable
 @Serializable data object InsightsRoute
 @Serializable data object ImportRoute
 @Serializable data object ExportRoute
-@Serializable data object SyncStatusRoute
 @Serializable data object SettingsRoute
-@Serializable data object AccountRoute
-@Serializable data object HouseholdRoute
+@Serializable data object SharingRoute
+@Serializable data object InviteRoute
+@Serializable data object JoinRoute
+@Serializable data object ConflictsRoute
 @Serializable data object RatesRoute
 @Serializable data object PrivacyRoute
-@Serializable data object DeleteAccountRoute
+@Serializable data object EraseRoute
 @Serializable data object FirstRunRoute

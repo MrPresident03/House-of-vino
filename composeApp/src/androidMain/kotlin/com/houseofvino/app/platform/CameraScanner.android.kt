@@ -81,7 +81,10 @@ actual fun CameraScanner(
         val analysisExecutor = Executors.newSingleThreadExecutor()
         val scanner = BarcodeScanning.getClient(
             BarcodeScannerOptions.Builder()
-                .setBarcodeFormats(Barcode.FORMAT_EAN_13, Barcode.FORMAT_EAN_8, Barcode.FORMAT_UPC_A, Barcode.FORMAT_UPC_E, Barcode.FORMAT_CODE_128)
+                .apply {
+                    if (mode == ScanMode.QR) setBarcodeFormats(Barcode.FORMAT_QR_CODE)
+                    else setBarcodeFormats(Barcode.FORMAT_EAN_13, Barcode.FORMAT_EAN_8, Barcode.FORMAT_UPC_A, Barcode.FORMAT_UPC_E, Barcode.FORMAT_CODE_128)
+                }
                 .build(),
         )
         providerFuture.addListener({
@@ -89,9 +92,10 @@ actual fun CameraScanner(
             val preview = Preview.Builder().build().also { it.setSurfaceProvider(previewView.surfaceProvider) }
             try {
                 provider.unbindAll()
-                if (mode == ScanMode.BARCODE) {
+                if (mode == ScanMode.BARCODE || mode == ScanMode.QR) {
                     val analysis = ImageAnalysis.Builder().setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST).build()
-                    analysis.setAnalyzer(analysisExecutor) { proxy -> analyse(proxy, handled, scanner, onResult) }
+                    val lastValue = java.util.concurrent.atomic.AtomicReference<String?>(null)
+                    analysis.setAnalyzer(analysisExecutor) { proxy -> analyse(proxy, handled, scanner, mode == ScanMode.QR, lastValue, onResult) }
                     provider.bindToLifecycle(lifecycleOwner, CameraSelector.DEFAULT_BACK_CAMERA, preview, analysis)
                 } else {
                     val ic = ImageCapture.Builder().setCaptureMode(ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY).build()
@@ -148,21 +152,33 @@ actual fun CameraScanner(
     }
 }
 
-private fun analyse(proxy: ImageProxy, handled: AtomicBoolean, scanner: com.google.mlkit.vision.barcode.BarcodeScanner, onResult: (ScanOutput) -> Unit) {
+/**
+ * Barcodes are reported once. QR codes (invites) are reported each time a *different* code is
+ * seen, so a wrong code doesn't stop the scanner.
+ */
+private fun analyse(
+    proxy: ImageProxy, handled: AtomicBoolean, scanner: com.google.mlkit.vision.barcode.BarcodeScanner,
+    repeatDistinct: Boolean, last: java.util.concurrent.atomic.AtomicReference<String?>, onResult: (ScanOutput) -> Unit,
+) {
     val media = proxy.image
-    if (media == null || handled.get()) { proxy.close(); return }
+    if (media == null || (!repeatDistinct && handled.get())) { proxy.close(); return }
     val input = InputImage.fromMediaImage(media, proxy.imageInfo.rotationDegrees)
     scanner.process(input)
         .addOnSuccessListener { codes ->
             val code = codes.firstOrNull { !it.rawValue.isNullOrBlank() } ?: return@addOnSuccessListener
-            if (handled.compareAndSet(false, true)) onResult(ScanOutput.Barcode(code.rawValue!!, symbology(code.format)))
+            val value = code.rawValue!!
+            if (repeatDistinct) {
+                if (last.getAndSet(value) != value) onResult(ScanOutput.Barcode(value, symbology(code.format)))
+            } else if (handled.compareAndSet(false, true)) {
+                onResult(ScanOutput.Barcode(value, symbology(code.format)))
+            }
         }
         .addOnCompleteListener { proxy.close() }
 }
 
 private fun symbology(format: Int) = when (format) {
     Barcode.FORMAT_EAN_13 -> "EAN_13"; Barcode.FORMAT_EAN_8 -> "EAN_8"; Barcode.FORMAT_UPC_A -> "UPC_A"
-    Barcode.FORMAT_UPC_E -> "UPC_E"; Barcode.FORMAT_CODE_128 -> "CODE_128"; else -> "OTHER"
+    Barcode.FORMAT_UPC_E -> "UPC_E"; Barcode.FORMAT_CODE_128 -> "CODE_128"; Barcode.FORMAT_QR_CODE -> "QR"; else -> "OTHER"
 }
 
 /** Downscales to at most 2048 px on the long edge and encodes as JPEG (q 85). */

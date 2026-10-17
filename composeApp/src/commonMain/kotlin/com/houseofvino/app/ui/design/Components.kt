@@ -415,20 +415,6 @@ fun ErrorState(message: String, onRetry: (() -> Unit)?, modifier: Modifier = Mod
 }
 
 @Composable
-fun OfflineBanner(pendingChanges: Int, modifier: Modifier = Modifier) {
-    Row(modifier.fillMaxWidth().background(Hv.colors.surfaceRaised).padding(horizontal = 16.dp, vertical = 8.dp)
-        .semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite }, verticalAlignment = Alignment.CenterVertically) {
-        Icon(HvIcons.Sync, contentDescription = null, tint = Hv.colors.inkMuted, modifier = Modifier.size(16.dp))
-        Spacer(Modifier.width(8.dp))
-        Text(
-            if (pendingChanges > 0) "Offline. $pendingChanges change${if (pendingChanges == 1) "" else "s"} saved on this device will sync when you're back online."
-            else "Offline. Everything is saved on this device.",
-            style = Hv.type.caption, color = Hv.colors.ink,
-        )
-    }
-}
-
-@Composable
 fun PermissionDenied(what: String, why: String, onOpenSettings: () -> Unit, onManual: (() -> Unit)?, modifier: Modifier = Modifier) {
     Column(modifier.fillMaxWidth().padding(32.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         Text("$what access is off", style = Hv.type.sectionTitle, color = Hv.colors.ink)

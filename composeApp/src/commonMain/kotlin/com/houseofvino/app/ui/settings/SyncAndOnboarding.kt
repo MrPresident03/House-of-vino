@@ -39,6 +39,7 @@ import com.houseofvino.app.ui.design.LoadingRows
 import com.houseofvino.app.ui.design.SectionHeader
 import com.houseofvino.app.ui.design.vintageLabel
 import com.houseofvino.data.db.Sync_conflict
+import com.houseofvino.data.sync.ConflictField
 import com.houseofvino.data.repo.SettingsRepository
 import com.houseofvino.data.repo.ThemePreference
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -50,86 +51,55 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 
 // =================================================================================================
-// Sync status and conflicts
+// Conflicts: changes made on two phones before they synced
 
-data class ConflictView(val raw: Sync_conflict, val title: String, val differences: List<Triple<String, String, String>>)
+data class ConflictView(val raw: Sync_conflict, val title: String, val differences: List<ConflictField>)
 
-class SyncStatusViewModel(graph: AppGraph) : GraphViewModel(graph) {
+class ConflictsViewModel(graph: AppGraph) : GraphViewModel(graph) {
     private val _conflicts = MutableStateFlow<List<ConflictView>?>(null)
     val conflicts: StateFlow<List<ConflictView>?> = _conflicts.asStateFlow()
-    private val _summary = MutableStateFlow<List<Pair<String, Long>>>(emptyList())
-    val summary: StateFlow<List<Pair<String, Long>>> = _summary.asStateFlow()
     private val json = Json { ignoreUnknownKeys = true }
 
     init {
-        observe("sync_conflict", "sync_outbox") {
-            _conflicts.value = io { db.local.openConflicts().executeAsList().map(::describe) }
-            _summary.value = io { db.local.outboxSummary().executeAsList().map { it.state to it.ops } }
+        observe("sync_conflict", "vintage", "wine") {
+            _conflicts.value = io { graph.conflicts.open().map(::describe) }
         }
     }
 
     private fun describe(c: Sync_conflict): ConflictView {
-        if (c.entity == "stock") {
-            val vintageId = runCatching { (json.parseToJsonElement(c.local_payload) as JsonObject)["vintage_id"]?.let { (it as JsonPrimitive).content } }.getOrNull()
-            val title = vintageId?.let { graph.cellar.vintageDetail(it) }?.let { "${vintageLabel(it.vintage.vintage)} ${it.wine.displayName}" } ?: "A wine"
-            return ConflictView(c, title, emptyList())
+        val vintageId = when (c.entity) {
+            "stock" -> runCatching { (json.parseToJsonElement(c.local_payload) as JsonObject)["vintage_id"]?.let { (it as JsonPrimitive).content } }.getOrNull()
+            "vintage" -> c.entity_id
+            else -> null
         }
-        val local = runCatching { json.parseToJsonElement(c.local_payload) as JsonObject }.getOrNull() ?: JsonObject(emptyMap())
-        val server = c.server_payload?.let { runCatching { json.parseToJsonElement(it) as JsonObject }.getOrNull() } ?: JsonObject(emptyMap())
-        val ignore = setOf("rev", "updated_at", "created_at", "server_updated_at", "collection_id", "id", "producer_sort")
-        val diffs = (local.keys + server.keys).filter { it !in ignore }.mapNotNull { k ->
-            val a = (local[k] as? JsonPrimitive)?.content ?: ""
-            val b = (server[k] as? JsonPrimitive)?.content ?: ""
-            if (a == b) null else Triple(k.replace('_', ' '), a.ifEmpty { "—" }.takeIf { it != "null" } ?: "—", b.ifEmpty { "—" }.takeIf { it != "null" } ?: "—")
-        }
-        val title = (local["producer"] as? JsonPrimitive)?.content ?: (local["name"] as? JsonPrimitive)?.content ?: c.entity.replace('_', ' ')
-        return ConflictView(c, title, diffs)
+        val title = vintageId?.let { graph.cellar.vintageDetail(it) }?.let { "${vintageLabel(it.vintage.vintage)} ${it.wine.displayName}" }
+            ?: (if (c.entity == "wine") graph.cellar.wine(c.entity_id)?.displayName else null)
+            ?: c.entity.replace('_', ' ').replaceFirstChar { it.uppercase() }
+        return ConflictView(c, title, graph.conflicts.fields(c).filter { it.column !in HIDDEN })
     }
 
-    fun keepMine(id: String) = launchIo { io { graph.syncEngine?.resolveKeepLocal(id) }; graph.sync.syncNow() }
-    fun keepTheirs(id: String) = launchIo { io { graph.syncEngine?.resolveKeepServer(id) ?: db.local.resolveConflict(db.now(), id) } }
-    fun retryFailed() = launchIo { io { graph.syncEngine?.retryFailed() }; graph.sync.syncNow() }
+    fun keepCurrent(id: String) = launchIo { io { graph.conflicts.keepCurrent(id) } }
+    fun useOther(id: String) = launchIo { io { graph.conflicts.useOther(id) }; messenger.show("Changed. Send changes so your partner gets it too.") }
+
+    private companion object { val HIDDEN = setOf("updated_at", "created_at", "producer_sort", "collection_id", "id") }
 }
 
 @Composable
-fun SyncStatusScreen(onBack: () -> Unit, onOpenVintage: (String) -> Unit, onAccount: () -> Unit) {
+fun ConflictsScreen(onBack: () -> Unit, onOpenVintage: (String) -> Unit) {
     val graph = appGraph()
-    val vm = viewModel { SyncStatusViewModel(graph) }
+    val vm = viewModel { ConflictsViewModel(graph) }
     val conflicts by vm.conflicts.collectAsState()
-    val summary by vm.summary.collectAsState()
-    val sync by graph.sync.state.collectAsState()
     Column(Modifier.fillMaxSize()) {
-        HvTopBar("Sync", onBack = onBack)
+        HvTopBar("Changed on both phones", onBack = onBack)
         LazyColumn(Modifier.weight(1f)) {
             item {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    when {
-                        !sync.configured -> Text("Sync isn't set up in this build. Your cellar is stored on this device only.", style = Hv.type.body, color = Hv.colors.ink)
-                        !sync.signedIn -> {
-                            Text("You're not signed in. Changes are kept on this device and will sync after you sign in.", style = Hv.type.body, color = Hv.colors.ink)
-                            HvButton("Sign in", onAccount, kind = ButtonKind.SECONDARY)
-                        }
-                        sync.offline -> Text("Offline. Changes are saved here and will sync when you're back online.", style = Hv.type.body, color = Hv.colors.ink)
-                        sync.engine.running -> Text("Syncing…", style = Hv.type.body, color = Hv.colors.ink)
-                        else -> Text(sync.engine.lastSuccessAt?.let { "Up to date." } ?: "Not synced yet.", style = Hv.type.body, color = Hv.colors.ink)
-                    }
-                    val pending = summary.filter { it.first != "FAILED_PERMANENT" }.sumOf { it.second }
-                    val failed = summary.filter { it.first == "FAILED_PERMANENT" }.sumOf { it.second }
-                    Text("$pending change(s) waiting to upload", style = Hv.type.bodyDense, color = Hv.colors.inkMuted)
-                    if (failed > 0) {
-                        Text("$failed change(s) were refused by the server (for example, you can only view this household). ${sync.engine.lastError ?: ""}",
-                            style = Hv.type.bodyDense, color = Hv.colors.danger)
-                        HvButton("Try them again", vm::retryFailed, kind = ButtonKind.SECONDARY)
-                    }
-                    if (sync.configured && sync.signedIn) HvButton("Sync now", { graph.scope.launch { graph.sync.syncNow() } }, icon = HvIcons.Sync)
-                }
+                Text("When the same detail is changed on two phones before they swap files, the later change is kept on both and the other is listed here so you can choose.",
+                    style = Hv.type.bodyDense, color = Hv.colors.inkMuted, modifier = Modifier.padding(16.dp))
             }
-            item { SectionHeader("Conflicts") }
             val list = conflicts
             when {
                 list == null -> item { LoadingRows(2) }
-                list.isEmpty() -> item { Text("None. When the same wine is changed on two devices, you'll choose which version to keep here.",
-                    style = Hv.type.bodyDense, color = Hv.colors.inkMuted, modifier = Modifier.padding(horizontal = 16.dp)) }
+                list.isEmpty() -> item { EmptyState("Nothing to review", "Both phones agree on everything they've seen.") }
                 else -> items(list, key = { it.raw.id }) { c -> ConflictItem(c, vm, onOpenVintage) }
             }
         }
@@ -137,19 +107,20 @@ fun SyncStatusScreen(onBack: () -> Unit, onOpenVintage: (String) -> Unit, onAcco
 }
 
 @Composable
-private fun ConflictItem(c: ConflictView, vm: SyncStatusViewModel, onOpenVintage: (String) -> Unit) {
+private fun ConflictItem(c: ConflictView, vm: ConflictsViewModel, onOpenVintage: (String) -> Unit) {
     Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text(c.title, style = Hv.type.body, color = Hv.colors.ink)
+        Text(c.title, style = Hv.type.body, color = Hv.colors.ink,
+            modifier = if (c.raw.entity == "vintage") Modifier.clickable { onOpenVintage(c.raw.entity_id) } else Modifier)
         Text(c.raw.reason, style = Hv.type.caption, color = Hv.colors.inkMuted)
-        c.differences.forEach { (field, mine, theirs) ->
-            Text("$field: this device “$mine”, other device “$theirs”", style = Hv.type.caption, color = Hv.colors.ink)
+        c.differences.forEach { d ->
+            Text("${d.column.replace('_', ' ')}: now “${d.current ?: "—"}”, other phone “${d.other ?: "—"}”", style = Hv.type.caption, color = Hv.colors.ink)
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             if (c.raw.entity == "stock") {
-                TextButton(onClick = { vm.keepTheirs(c.raw.id) }) { Text("I've counted the bottles") }
+                TextButton(onClick = { vm.keepCurrent(c.raw.id) }) { Text("I've counted the bottles") }
             } else {
-                TextButton(onClick = { vm.keepMine(c.raw.id) }) { Text("Keep this device's") }
-                TextButton(onClick = { vm.keepTheirs(c.raw.id) }) { Text("Keep the other") }
+                TextButton(onClick = { vm.keepCurrent(c.raw.id) }) { Text("Keep it as it is") }
+                TextButton(onClick = { vm.useOther(c.raw.id) }) { Text("Use the other phone's") }
             }
         }
     }
@@ -160,7 +131,7 @@ private fun ConflictItem(c: ConflictView, vm: SyncStatusViewModel, onOpenVintage
 // First run
 
 @Composable
-fun FirstRunScreen(onDone: () -> Unit, onSignIn: () -> Unit) {
+fun FirstRunScreen(onDone: () -> Unit, onJoin: () -> Unit) {
     val graph = appGraph()
     var currency by remember { mutableStateOf(graph.settings.preferences().currency) }
     var theme by remember { mutableStateOf(ThemePreference.SYSTEM) }
@@ -180,8 +151,8 @@ fun FirstRunScreen(onDone: () -> Unit, onSignIn: () -> Unit) {
         com.houseofvino.app.ui.design.ChoiceChips(ThemePreference.entries, setOf(theme),
             { when (it) { ThemePreference.SYSTEM -> "Match device"; ThemePreference.DARK -> "Dark"; ThemePreference.LIGHT -> "Light" } }, { theme = it })
         HvButton("Start with an empty cellar", { finish(onDone) }, Modifier.fillMaxWidth())
-        if (graph.account != null) HvButton("Sign in to restore or sync", { finish(onSignIn) }, Modifier.fillMaxWidth(), kind = ButtonKind.SECONDARY)
-        Text("Everything works offline. An account is only needed to back up and share.", style = Hv.type.caption, color = Hv.colors.inkMuted)
+        HvButton("Join a partner's cellar", { finish(onJoin) }, Modifier.fillMaxWidth(), kind = ButtonKind.SECONDARY)
+        Text("Everything stays on your phone. There's no account; you can share with a partner's phone at any time.", style = Hv.type.caption, color = Hv.colors.inkMuted)
     }
 }
 

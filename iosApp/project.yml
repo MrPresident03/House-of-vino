@@ -31,13 +31,7 @@ targets:
         UISupportedInterfaceOrientations~ipad: [UIInterfaceOrientationPortrait, UIInterfaceOrientationPortraitUpsideDown, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
         CADisableMinimumFrameDurationOnPhone: true
         ITSAppUsesNonExemptEncryption: false
-        NSCameraUsageDescription: The camera reads barcodes and wine labels on this device. A label photo is kept only if you save it with the bottle.
-        UIBackgroundModes: [fetch]
-        BGTaskSchedulerPermittedIdentifiers: [com.houseofvino.sync]
-        # Filled from Configuration/Secrets.xcconfig (git-ignored) or CI environment. Both may be empty:
-        # the app then runs in local-only mode.
-        SupabaseUrl: $(SUPABASE_URL)
-        SupabaseAnonKey: $(SUPABASE_ANON_KEY)
+        NSCameraUsageDescription: The camera reads barcodes, wine labels and partner invite codes on this device. A label photo is kept only if you save it with the bottle.
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.houseofvino.app
@@ -53,9 +47,6 @@ targets:
         # SQLDelight's native driver links the system SQLite.
         OTHER_LDFLAGS: ["$(inherited)", "-framework", "ComposeApp", "-lsqlite3"]
     preBuildScripts:
-      - name: Refuse privileged Supabase keys
-        script: '"$SRCROOT/scripts/check-supabase-key.sh"'
-        basedOnDependencyAnalysis: false
       - name: Compile Kotlin framework
         script: |
           if [ "YES" = "$OVERRIDE_KOTLIN_BUILD_IDE_SUPPORTED" ]; then

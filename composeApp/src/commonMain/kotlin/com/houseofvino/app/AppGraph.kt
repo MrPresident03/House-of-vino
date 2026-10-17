@@ -12,10 +12,6 @@ import com.houseofvino.data.integrations.OpenFoodFactsBarcodeLookup
 import com.houseofvino.data.integrations.UnavailableBarcodeLookup
 import com.houseofvino.data.io.ExportService
 import com.houseofvino.data.io.ImportService
-import com.houseofvino.data.remote.AccountService
-import com.houseofvino.data.remote.PhotoStorage
-import com.houseofvino.data.remote.SupabaseSyncRemote
-import com.houseofvino.data.remote.createBackend
 import com.houseofvino.data.repo.CellarRepository
 import com.houseofvino.data.repo.InsightsRepository
 import com.houseofvino.data.repo.JournalRepository
@@ -24,8 +20,9 @@ import com.houseofvino.data.repo.PhotoRepository
 import com.houseofvino.data.repo.SettingsRepository
 import com.houseofvino.data.repo.WishlistRepository
 import com.houseofvino.data.search.SearchEngine
-import com.houseofvino.data.sync.SyncEngine
-import io.github.jan.supabase.SupabaseClient
+import com.houseofvino.data.sync.ConflictService
+import com.houseofvino.data.sync.HouseholdRepository
+import com.houseofvino.data.sync.SyncFileService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.Dispatchers
@@ -33,14 +30,13 @@ import kotlinx.coroutines.IO
 
 /**
  * Hand-wired dependency graph (ADR-02). Created once per process by the platform entry point.
- * Everything here works offline; the backend parts are null when no Supabase project is configured.
+ * There is no backend (ADR-13): sharing with a partner goes through encrypted sync files.
  */
 class AppGraph(
     val platform: PlatformServices,
     driver: SqlDriver,
     clock: Clock = Clock.System,
     ids: IdGenerator = IdGenerator.Random,
-    backendClient: SupabaseClient? = platform.backend?.takeIf { it.isConfigured }?.let(::createBackend),
     barcodeLookup: BarcodeLookupService? = null,
 ) {
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -59,23 +55,25 @@ class AppGraph(
     val importer = ImportService(db, cellar, locations)
     val exporter = ExportService(db, locations)
 
-    val backend: SupabaseClient? = backendClient
-    val account: AccountService? = backend?.let { AccountService(it) }
-    val photoStorage: PhotoStorage? = backend?.let { PhotoStorage(it) }
-    val syncEngine: SyncEngine? = backend?.let { SyncEngine(db, SupabaseSyncRemote(it)) }
+    val household = HouseholdRepository(db, defaultDeviceName = "${platform.platformName} phone")
+    val syncFiles = SyncFileService(db, household)
+    val conflicts = ConflictService(db)
 
     /** Barcode lookup is an external service (Open Food Facts, ODbL); manual entry always works. */
     val barcodes: BarcodeLookupService = barcodeLookup ?: OpenFoodFactsBarcodeLookup.createOrNull() ?: UnavailableBarcodeLookup
 
-    /** The active collection. Replaced only when the local copy is wiped. */
+    /** The active collection. Changes when this phone joins a household or is erased. */
     var collectionId: String = ensureLocalCollection()
         private set
 
-    val sync = SyncCoordinator(this)
-
     fun converter(): CurrencyConverter = CurrencyConverter(settings.rates(collectionId))
 
-    /** Erases this device's copy of the cellar (after account deletion, or on request). */
+    /** Switches to the household's collection after joining it. */
+    fun useCollection(id: String) {
+        collectionId = id
+    }
+
+    /** Erases this phone's copy of the cellar ("Erase this phone"). */
     fun wipeLocalData() {
         db.wipeAll().forEach { path -> runCatching { platform.deletePhoto(path) } }
         // The old collection id may still belong to a household on the server; start afresh with

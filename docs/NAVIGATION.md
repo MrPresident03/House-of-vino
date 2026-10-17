@@ -5,7 +5,7 @@ each tab's scroll and stack. Routes are `@Serializable` types (type-safe Navigat
 
 ```
 Launch
- ├─ FirstRun (only on first launch): currency → sign in or continue offline
+ ├─ FirstRun (only on first launch): currency, appearance → start, or join a partner's cellar
  └─ Main (bottom bar)
      ├─ Cellar ─────────────── inventory list/grid, sort, quick filters, summary strip
      │    ├─ VintageDetail(vintageId)
@@ -34,19 +34,21 @@ Launch
           ├─ Insights ────── totals, cost, value (with sources), windows, consumption, breakdowns
           ├─ ImportExport ── CsvImport: pick → map columns → validate → duplicates → commit
           │                  Export: inventory · tasting history · financial records
-          ├─ SyncStatus ──── queue, last sync, errors, Conflicts → ConflictDetail
-          └─ Settings ────── Account · Household (members, invites) · Currency & rates ·
-                             Preferences · Privacy · Notifications · Backup · Delete account
+          ├─ Sharing ─────── not shared: Share this cellar → Invite (QR + code) · Join → scan/paste → confirm
+          │                  shared: Send changes · Receive changes · phones · Invite · Remove · Stop sharing
+          │                  └─ Conflicts ("Changed on both phones") → keep / use the other
+          └─ Settings ────── Sharing · Currency & rates · Preferences · Privacy · Notifications ·
+                             Backup and export · Conflicts · Erase this phone
 ```
 
 ## Deep links (Android App Links and iOS universal links, future)
 
 - `houseofvino://vintage/{id}`
-- `houseofvino://invite/{token}` → AcceptInvite
+- Opening a `.hovsync` file from another app → Receive changes
 
 ## State rules
 
 - Each screen has a ViewModel exposing `StateFlow<UiState>`. Screens are stateless composables
   that take state and callbacks, so UI tests can drive them directly.
 - `UiState` is one of Loading / Content / Empty / Error, and every list screen renders all four.
-  The Offline banner and the permission-denied state are cross-cutting components.
+  The permission-denied state is a cross-cutting component.

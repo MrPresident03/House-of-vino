@@ -13,7 +13,6 @@ CI is green on Linux and macOS:
   Android debug APK builds.
 - **ios**: the same core and data tests on the iOS simulator with the system SQLite (120), and
   the Xcode app builds for the simulator.
-- **server-sql**: Supabase schema, RLS, households and the sync RPC on PostgreSQL 16.
 
 `[x]` means covered by those automated tests. Platform features that need a camera, file
 pickers, notifications or background execution stay `[~]` until the manual device pass at
@@ -32,7 +31,9 @@ the end of this file has been done on real phones.
 - [x] CSV read/write (RFC 4180), column mapping, row validation, duplicate detection (T)
 - [x] Drinking-window status, insights maths (T)
 - [x] Barcode/label candidate validation (no vintage/format assumed) (T)
-- [x] Supabase key classification; privileged keys refused (T)
+- [x] Sync merge rules: hybrid logical clock, field-level last-writer-wins, conflict detection, convergence property test (T)
+- [x] XChaCha20-Poly1305, SHA-256, Base64 against published vectors and reference libraries (T)
+- [x] QR encoder: bit-identical to a reference encoder, decoded by ZXing (T)
 
 ## M3 Persistence (`data`)
 - [x] SQLDelight schema v1 + migration test (T)
@@ -42,13 +43,19 @@ the end of this file has been done on real phones.
 - [x] Saved searches, recent queries (T)
 - [x] 5,000-bottle performance test (search p95 and list paging) (T)
 
-## M4 Backend and sync
-- [x] Supabase migrations: tables, rev triggers, advisory lock, RLS, household roles, invites (T: SQL)
-- [x] `sync_push` RPC: idempotent op_ids, optimistic concurrency, movement immutability (T: SQL)
-- [~] `delete-account` Edge Function + SQL cleanup (SQL part tested; the Deno function is untested)
-- [x] Kotlin sync engine: outbox, coalescing, retries/backoff, pull cursors, tombstones, conflicts (T)
-- [x] Multi-device and concurrent-stock integration tests against an in-memory fake server (T)
-- [~] Supabase remote implementation (auth, PostgREST pull, RPC push, storage upload)
+## M4 Household sync without a server (ADR-13)
+- [~] Change journal recorded with every write; one-time journaling of pre-existing rows (T)
+- [~] Ingest in clock order with causal gap detection, field merge, conflicts, negative-stock flags (T)
+- [~] Encrypted, text-armoured sync files; household key, invites, safety code (T)
+- [~] Join with merge of the joining phone's cellar (re-keying) (T)
+- [~] Remove partner (key rotation), stop sharing, erase phone with new device identity (T)
+- [~] Two- and three-phone convergence under random edits, lost and duplicated files (T)
+- [ ] Phone-to-phone sync on home Wi-Fi
+- [ ] Shared Google Drive folder transport
+- [ ] Journal compaction
+
+> The Supabase backend built earlier (server schema, RLS, sync RPC, accounts) was removed on
+> 2026-10-18 so the app costs nothing to run. Its tests passed; the code is in git history.
 
 ## M5 Core UI
 - [x] Design system tokens, fonts, components, contrast test (T)
@@ -64,13 +71,13 @@ the end of this file has been done on real phones.
 - [~] Tasting journal: structured + free notes, rating, photos, occasion, pairing (T) — logic tested; screen only partly covered by UI tests
 - [~] Insights: totals, cost, value with provenance, windows, consumption, breakdowns (T) — logic tested; screen only partly covered by UI tests
 - [~] CSV import flow (pick, map, validate, duplicates, commit, report) and exports (T) — logic tested; screen only partly covered by UI tests
-- [~] Settings: account, household, currency & rates, preferences, privacy, notifications, backup, delete account
+- [~] Settings: sharing, currency & rates, preferences, privacy, notifications, backup, erase this phone
+- [~] Sharing screens: share, invite QR, join by scan or paste, send/receive file, phones, conflicts (T: UI)
 
 ## M7 Scanning and platform
 - [~] Android: CameraX + ML Kit barcode and text recognition; permission states
 - [~] iOS: AVFoundation barcode + Vision text recognition; permission states
 - [x] Open Food Facts barcode lookup (behind interface) + manual fallback everywhere (T)
-- [~] Background sync: WorkManager (Android), BGTaskScheduler (iOS)
 - [~] Drinking-window notifications (local)
 
 ## Release gates (spec §10)
@@ -91,9 +98,9 @@ the end of this file has been done on real phones.
 - [ ] CSV import from the Files app / document picker; export opens the share sheet
 - [ ] Photo from the library attached to a tasting note; shows after app restart
 - [ ] Airplane mode: add, drink and move bottles; reconnect; changes sync once, no duplicates
-- [ ] Two devices on one account drink the last bottle while offline: stock conflict is flagged
-- [ ] Household invite accepted on a second account; viewer can't edit
+- [ ] Pair two real phones (iPhone ↔ Android) by QR; both show the same safety code
+- [ ] Send a .hovsync file through Messages/WhatsApp/email and receive it on the other phone
+- [ ] Both phones drink the last bottle before swapping files: stock conflict is flagged
 - [ ] Drinking-window reminder permission prompt and delivery
-- [ ] Background sync after leaving the app (WorkManager / BGTaskScheduler)
 - [ ] VoiceOver / TalkBack through add wine, drink a bottle and search; Dynamic Type at the largest size
 - [ ] Dark and light themes; reduced motion turns off the quantity roll

@@ -20,38 +20,8 @@ concurrency:
 
 env:
   GRADLE_OPTS: -Dorg.gradle.daemon=false
-  # Builds are configured without a backend unless these repository secrets exist. Only ever the
-  # *publishable* key: the build refuses a secret/service-role key.
-  SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-  SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
 
 jobs:
-  server-sql:
-    name: Supabase schema, RLS and sync RPC
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_PASSWORD: postgres
-        ports: ["5432:5432"]
-        options: >-
-          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 20
-    steps:
-      - uses: actions/checkout@v4
-      - name: Run server tests
-        env:
-          PGPASSWORD: postgres
-        run: |
-          set -o pipefail
-          supabase/tests/run.sh -h localhost -p 5432 -U postgres 2>&1 | tee ci.log
-      - name: Publish results
-        if: always()
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: .github/scripts/publish-results.sh server-sql "${{ job.status }}" ci.log
-
   jvm-android:
     name: JVM tests + Android build
     runs-on: ubuntu-latest

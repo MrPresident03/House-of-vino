@@ -2,7 +2,6 @@ package com.houseofvino.app.platform
 
 import com.houseofvino.core.money.MoneyFormatStyle
 import com.houseofvino.core.time.IsoDate
-import com.houseofvino.data.remote.BackendConfig
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.useContents
@@ -40,12 +39,6 @@ import platform.Foundation.localTimeZone
 import platform.Foundation.secondsFromGMT
 import platform.Foundation.stringWithContentsOfURL
 import platform.Foundation.writeToFile
-import platform.Network.nw_path_get_status
-import platform.Network.nw_path_monitor_create
-import platform.Network.nw_path_monitor_set_queue
-import platform.Network.nw_path_monitor_set_update_handler
-import platform.Network.nw_path_monitor_start
-import platform.Network.nw_path_status_satisfied
 import platform.PhotosUI.PHPickerConfiguration
 import platform.PhotosUI.PHPickerFilter
 import platform.PhotosUI.PHPickerResult
@@ -64,6 +57,7 @@ import platform.UIKit.UIImageJPEGRepresentation
 import platform.UIKit.UIViewController
 import platform.UniformTypeIdentifiers.UTTypeCommaSeparatedText
 import platform.UniformTypeIdentifiers.UTTypeImage
+import platform.UniformTypeIdentifiers.UTTypeItem
 import platform.UniformTypeIdentifiers.UTTypePlainText
 import platform.UniformTypeIdentifiers.UTTypeTabSeparatedText
 import platform.UserNotifications.UNAuthorizationOptionAlert
@@ -79,12 +73,6 @@ import platform.darwin.dispatch_get_main_queue
 @OptIn(ExperimentalForeignApi::class)
 class IosPlatform : PlatformServices {
     override val platformName = "iOS"
-
-    override val backend: BackendConfig? = run {
-        val url = NSBundle.mainBundle.objectForInfoDictionaryKey("SupabaseUrl") as? String
-        val key = NSBundle.mainBundle.objectForInfoDictionaryKey("SupabaseAnonKey") as? String
-        if (url.isNullOrBlank() || key.isNullOrBlank() || url.contains("$(")) null else BackendConfig(url, key)
-    }
 
     override val appVersion: String =
         (NSBundle.mainBundle.objectForInfoDictionaryKey("CFBundleShortVersionString") as? String) ?: "dev"
@@ -137,8 +125,10 @@ class IosPlatform : PlatformServices {
     private var documentDelegate: DocumentDelegate? = null
     private var photoDelegate: PhotoPickerDelegate? = null
 
-    override fun pickTextFile(onPicked: (PickedFile?) -> Unit) {
-        val picker = UIDocumentPickerViewController(forOpeningContentTypes = listOf(UTTypeCommaSeparatedText, UTTypeTabSeparatedText, UTTypePlainText), asCopy = true)
+    override fun pickTextFile(kind: PickKind, onPicked: (PickedFile?) -> Unit) {
+        // Sync files arrive from messaging apps with any type, so accept any file for them.
+        val types = if (kind == PickKind.SYNC) listOf(UTTypeItem) else listOf(UTTypeCommaSeparatedText, UTTypeTabSeparatedText, UTTypePlainText)
+        val picker = UIDocumentPickerViewController(forOpeningContentTypes = types, asCopy = true)
         val delegate = DocumentDelegate { url ->
             documentDelegate = null
             if (url == null) { onPicked(null); return@DocumentDelegate }
@@ -182,7 +172,7 @@ class IosPlatform : PlatformServices {
 
     override fun scanningAvailable(): Boolean = AVCaptureDevice.defaultDeviceWithMediaType(AVMediaTypeVideo) != null
 
-    // ---- Notifications, background work, network ---------------------------------------------
+    // ---- Notifications ---------------------------------------------------------------------------
 
     override fun setWindowReminders(enabled: Boolean, dueCount: Int) {
         // [dueCount] is deliberately unused: a count fixed at scheduling time would be wrong by delivery.
@@ -200,19 +190,6 @@ class IosPlatform : PlatformServices {
             val trigger = UNCalendarNotificationTrigger.triggerWithDateMatchingComponents(date, repeats = true)
             center.addNotificationRequest(UNNotificationRequest.requestWithIdentifier(REMINDER_ID, content, trigger), withCompletionHandler = null)
         }
-    }
-
-    override fun requestBackgroundSync() = BackgroundSync.schedule()
-
-    // Held for the life of the process so the monitor isn't released.
-    private var pathMonitor: Any? = null
-
-    override fun onNetworkAvailable(callback: () -> Unit) {
-        val monitor = nw_path_monitor_create()
-        pathMonitor = monitor
-        nw_path_monitor_set_update_handler(monitor) { path -> if (nw_path_get_status(path) == nw_path_status_satisfied) callback() }
-        nw_path_monitor_set_queue(monitor, dispatch_get_main_queue())
-        nw_path_monitor_start(monitor)
     }
 
     companion object {

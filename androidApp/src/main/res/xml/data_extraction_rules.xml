@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
   Privacy decision (ADR-09): the cellar database and photos are excluded from Google cloud backup
-  and device-to-device transfer. Backup is the user's choice: Supabase sync or CSV export.
+  and device-to-device transfer. Backup is the user's choice: a partner's phone (household sharing) or CSV export.
 -->
 <data-extraction-rules>
     <cloud-backup>

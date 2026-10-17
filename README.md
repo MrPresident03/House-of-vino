@@ -3,11 +3,12 @@
 A cellar book for serious wine collections, for iOS and Android: inventory with purchase
 batches and locations, an append-only stock ledger, search that stays fast at thousands of
 bottles, a wishlist, a tasting journal, insights, CSV import/export and on-device label and
-barcode scanning. It works fully offline. An optional Supabase backend adds sync, backup and
-household sharing.
+barcode scanning. It works fully offline, and partners can share one cellar between their
+phones without an account or a server, so it costs nothing to run.
 
-Built with Kotlin Multiplatform and Compose Multiplatform, SQLDelight (SQLite) on the device,
-and Supabase (PostgreSQL, Auth, Storage) on the server.
+Built with Kotlin Multiplatform and Compose Multiplatform, with SQLDelight (SQLite) on the
+device. Household sharing is a replicated change journal exchanged as encrypted files
+([`docs/SYNC.md`](docs/SYNC.md)).
 
 Design decisions, with every choice that affects **privacy, recurring cost, data licensing or
 irreversible data changes** marked ⚑, are in [`docs/ADR.md`](docs/ADR.md). Also in `docs/`:
@@ -18,12 +19,11 @@ records what is done and tested.
 
 | Path | What it is |
 |---|---|
-| `core/` | Pure Kotlin domain logic, no dependencies: money (integer minor units, HALF_EVEN FX), vintages and formats, the stock ledger, text normalisation and fuzzy matching, the CSV reader/writer, import mapping and duplicate detection, insights maths, scan candidate matching, API-key classification |
-| `data/` | SQLDelight schema and migrations, repositories, FTS search engine, import/export, outbox-based sync engine, Supabase client, Open Food Facts lookup |
+| `core/` | Pure Kotlin domain logic, no dependencies: money (integer minor units, HALF_EVEN FX), vintages and formats, the stock ledger, text normalisation and fuzzy matching, the CSV reader/writer, import mapping and duplicate detection, insights maths, scan candidate matching, sync merge rules and hybrid logical clocks, XChaCha20-Poly1305 / SHA-256 / Base64, a QR code encoder |
+| `data/` | SQLDelight schema and migrations, repositories, FTS search engine, import/export, the change journal, households and invites, encrypted sync files, conflict review, Open Food Facts lookup |
 | `composeApp/` | Shared Compose UI (all screens), design system, platform contract, camera scanners (CameraX + ML Kit on Android, AVFoundation + Vision on iOS), iOS platform services |
-| `androidApp/` | Android application: activity, platform services, WorkManager sync and reminders, manifest, FileProvider |
+| `androidApp/` | Android application: activity, platform services, WorkManager reminders, manifest, FileProvider |
 | `iosApp/` | iOS host app: XcodeGen spec, SwiftUI entry point, Info.plist settings, asset catalog |
-| `supabase/` | Postgres migrations (tables, RLS, revision triggers, sync RPC, households), SQL contract tests, the `delete-account` Edge Function |
 | `.github/` | CI workflow and the script that publishes results to the `ci-results` branch |
 
 ## Prerequisites
@@ -32,80 +32,54 @@ records what is done and tested.
 - Android: Android Studio with SDK platform 36. Minimum Android version is 11 (API 30).
 - iOS: a Mac with Xcode 16 or newer and [XcodeGen](https://github.com/yonaskolb/XcodeGen)
   (`brew install xcodegen`). Minimum iOS version is 16.
-- Backend (optional): the [Supabase CLI](https://supabase.com/docs/guides/cli) and a Supabase
-  project. For running the server tests locally, PostgreSQL 16 and `psql`.
+
+There is no backend to set up.
 
 ## Configuration
 
-The app runs without any configuration in **local-only mode**: everything is stored on the
-device and sync/account screens explain that no server is configured. To enable sync, supply
-two values.
+None. The app has no server, no API keys and no accounts. The only build setting is your
+Apple team ID for installing on a real iPhone: copy
+`iosApp/Configuration/Secrets.xcconfig.example` to `Secrets.xcconfig` (git-ignored) and fill
+in `HV_DEVELOPMENT_TEAM`. For Android, `local.properties` only needs `sdk.dir`
+(see `local.properties.example`).
 
-| Variable | Used by | Where to set it |
-|---|---|---|
-| `SUPABASE_URL` | Android, iOS | Android: environment variable or `local.properties`. iOS: `iosApp/Configuration/Secrets.xcconfig` (write `https:/$()/…`, because `//` starts a comment in xcconfig). CI: repository secret |
-| `SUPABASE_ANON_KEY` | Android, iOS | Same places. **Publishable (anon) key only** |
-| `HV_DEVELOPMENT_TEAM` | iOS device builds | `Secrets.xcconfig` (your Apple team ID) |
-| `SUPABASE_SERVICE_ROLE_KEY` | `delete-account` Edge Function only | Provided automatically by Supabase to Edge Functions. Never put it anywhere else |
+## How partners share a cellar
 
-Templates: `local.properties.example` and `iosApp/Configuration/Secrets.xcconfig.example`.
-Both real files are git-ignored.
+1. One phone: **More › Sharing › Share this cellar**. It creates a random household key and
+   shows an invite QR code.
+2. The other phone: **Sharing › Join a partner's cellar**, then scans the code (or pastes the
+   invite text). Its own bottles are merged into the shared cellar. Both phones then show the
+   same safety code.
+3. From then on, **Send changes** makes an encrypted `.hovsync` file of everything the other
+   phone hasn't seen, to pass on with any app (Messages, WhatsApp, email, AirDrop). The other
+   phone opens it with **Receive changes**.
 
-**Privileged keys are refused.** `core.security.KeyGuard` recognises Supabase's
-`sb_publishable_…` / `sb_secret_…` keys and decodes legacy JWT keys to read their role. The
-Android Gradle build, the Xcode pre-build script (`iosApp/scripts/check-supabase-key.sh`) and
-the app itself all reject a secret or service-role key, so one can't end up in a build by
-mistake.
+Edits to different details merge automatically. If both phones change the same detail before
+swapping files, the later edit wins on both and the other is listed under **Changed on both
+phones**. Stock is never overwritten: both phones' bottle movements are kept, and stock that
+goes below zero is flagged for a recount. Details and the file format are in `docs/SYNC.md`.
 
-## Backend setup (Supabase)
-
-1. Create a project at [supabase.com](https://supabase.com) and note its URL and publishable
-   (anon) key from *Project Settings → API*.
-2. Link and apply the migrations:
-   ```sh
-   supabase login
-   supabase link --project-ref <your-project-ref>
-   supabase db push            # applies supabase/migrations/*.sql in order
-   ```
-   The migrations create every table with row-level security, the revision triggers, the
-   `sync_push` RPC, household/invite functions and the private `photos` storage bucket.
-3. Deploy the account-deletion function:
-   ```sh
-   supabase functions deploy delete-account
-   ```
-4. In *Authentication*, keep the Email provider enabled. The app signs in with a password or
-   with a one-time code typed into the app, so edit the *Magic Link* email template to include
-   the code (`{{ .Token }}`); the default template only contains a link. The app doesn't
-   handle deep links in this release, so set the *Site URL* to a simple web page of yours
-   ("Email confirmed, return to the app") for sign-up confirmation links to land on.
-5. Put the URL and publishable key into your Android/iOS configuration (above).
-
-New migrations go in `supabase/migrations/` with a timestamp prefix, and never edit one that
-has been applied. Local database migrations are SQLDelight `.sqm` files in
-`data/src/commonMain/sqldelight/com/houseofvino/data/db/` (`1.sqm` is the initial schema; add `2.sqm` for
-the next change). `SchemaTest` checks that the sync registry matches the real schema.
-
-For a fully local stack, `supabase start` runs everything in Docker. The Android emulator
-reaches it at `http://10.0.2.2:54321`, which is the only plain-HTTP address the app accepts.
+Local database migrations are SQLDelight `.sqm` files in
+`data/src/commonMain/sqldelight/com/houseofvino/data/db/` (`1.sqm` is the initial schema,
+`2.sqm` adds the change journal). Never edit one that has shipped; add the next number.
+`SchemaTest` checks that the sync table registry matches the real schema.
 
 ## Running tests
 
 ```sh
 ./gradlew :core:jvmTest                 # domain logic
-./gradlew :data:jvmTest                 # SQLite schema, repositories, search (incl. 5,000-bottle performance), sync, import/export
-./gradlew :composeApp:jvmTest           # design-token contrast + end-to-end UI flows on the desktop JVM
+./gradlew :data:jvmTest                 # SQLite schema, repositories, search (incl. 5,000-bottle performance), household sync, import/export
+./gradlew :composeApp:jvmTest           # design-token contrast + end-to-end UI flows (incl. joining and swapping a sync file) on the desktop JVM
 ./gradlew :core:iosSimulatorArm64Test :data:iosSimulatorArm64Test   # on a Mac: same tests on Kotlin/Native + system SQLite
-
-supabase/tests/run.sh -h localhost -p 5432 -U postgres   # server: RLS, households, sync RPC (needs PostgreSQL 16)
 ```
 
-The server tests apply the migrations to a scratch database with a minimal stand-in for
-Supabase's `auth` and `storage` schemas, then check that users can't read or write each
-other's collections, viewers can't write, movements can't be updated or deleted, pushes are
-idempotent and stale writes are reported as conflicts.
+The household sync tests run two and three simulated phones against real databases: partners
+converge after random edits with files lost, delayed or delivered twice; edits to the same
+field are kept and reported; both drinking the last bottle is flagged; damaged, foreign and
+removed partners' files are refused. The crypto and QR code tests check published vectors and
+reference implementations.
 
-Camera scanning, file pickers, the share sheet, notifications and background sync need a
-real device. The manual release checklist is at the end of `docs/CHECKLIST.md`.
+Camera scanning, file pickers, the share sheet and notifications need a real device. The manual release checklist is at the end of `docs/CHECKLIST.md`.
 
 ## Building
 
@@ -123,7 +97,7 @@ configuration in `androidApp/build.gradle.kts`, with the keystore kept out of th
 
 ```sh
 cd iosApp
-cp Configuration/Secrets.xcconfig.example Configuration/Secrets.xcconfig   # then edit, or leave empty for local-only
+cp Configuration/Secrets.xcconfig.example Configuration/Secrets.xcconfig   # your team ID, for real devices
 xcodegen generate
 open HouseOfVino.xcodeproj
 ```
@@ -133,9 +107,8 @@ which takes several minutes.
 
 ## Continuous integration
 
-`.github/workflows/ci.yml` runs on every push to `main` and on pull requests:
+`.github/workflows/ci.yml` runs on every push to `main` (and `work/**` branches) and on pull requests:
 
-- **server-sql**: the Supabase migrations and contract tests on PostgreSQL 16.
 - **jvm-android**: `core`, `data` and `composeApp` JVM tests and the Android debug build. The
   APK is kept as a workflow artifact for 14 days.
 - **ios** (opt-in): Kotlin/Native tests on the iOS simulator, then XcodeGen and an
@@ -149,16 +122,16 @@ the latest result per job in `latest-<job>.md`.
 
 ## External services, costs and credentials
 
-Prices are as published at the time of writing (October 2026). Check the providers' pages
-before relying on them.
+Running the app costs nothing: there is no server. Sync files travel through apps the users
+already have. Prices below are as published at the time of writing (October 2026); check the
+providers' pages before relying on them.
 
 | Service | Used for | Cost | Credentials | Notes |
 |---|---|---|---|---|
-| Supabase | Sync, accounts, photo storage, households | Free plan $0 (500 MB database, 1 GB files; **projects pause after a week of inactivity**). Pro plan from $25/month per project ⚑ | Project URL + publishable key in the app; service-role key only inside the Edge Function | Optional: the app works without it |
 | Open Food Facts | Barcode lookup and the *Discover* search scope | Free | None. Requests send a `User-Agent`; set a real contact address in `OpenFoodFactsBarcodeLookup.DEFAULT_USER_AGENT` before release | Data under the **ODbL** (attribution shown with results; share-alike applies to any database built from it) ⚑. Limits: 15 product reads and 10 searches per minute per user. The app stays below them and only searches when asked |
 | Google ML Kit (Android) | On-device barcode and text recognition | Free | None | Models are bundled. Google may receive diagnostics (no images or text) ⚑; disclose in the Play *Data safety* form |
 | Apple Vision / AVFoundation (iOS) | On-device barcode and text recognition | Free | None | |
-| GitHub Actions | CI | Included minutes on your plan for private repositories, then per-minute billing; macOS minutes cost several times Linux minutes ⚑ | Built-in `GITHUB_TOKEN`; optional `SUPABASE_URL` / `SUPABASE_ANON_KEY` secrets | The iOS job is opt-in for that reason |
+| GitHub Actions | CI | Included minutes on your plan for private repositories, then per-minute billing; macOS minutes cost several times Linux minutes ⚑ | Built-in `GITHUB_TOKEN` | The iOS job is opt-in for that reason |
 | Apple Developer Program | Installing on devices beyond personal testing, TestFlight, App Store | US$99/year | Apple ID, team ID | Needed for distribution only |
 | Google Play Console | Play Store distribution | US$25 one-time | Google account | Needed for distribution only |
 
@@ -171,17 +144,18 @@ source and date. `WineCatalogService` and `PriceService` are interfaces ready fo
 
 The full reasoning is in `docs/ADR.md`; the short version:
 
-- ⚑ **Privacy**: data stays on the device until the user signs in. On the server every table
-  has row-level security, and a collection is visible only to its household members. Android
-  device backups exclude the cellar (ADR-11), so backup is sync or CSV export. Label OCR runs
-  on the device.
-- ⚑ **Recurring cost**: Supabase Pro for production; GitHub Actions minutes for CI.
+- ⚑ **Privacy**: data never leaves the phone except in sync files the user sends, which are
+  encrypted with a key only the paired phones hold (ADR-13). The invite QR code *is* that key,
+  so it's meant to be shown in person. Android device backups exclude the cellar (ADR-11), so
+  backup is a partner's phone or CSV export. Label OCR runs on the device.
+- ⚑ **Recurring cost**: none to run the app; GitHub Actions minutes for CI.
 - ⚑ **Licensing**: Open Food Facts data is ODbL. Fonts (Bodoni Moda, IBM Plex Sans) are under
   the SIL Open Font License; the licence files are in `composeApp/licenses/`.
-- ⚑ **Irreversible**: deleting an account removes every collection the user owns, including
-  shared households, their photos and history (ADR-08). The app offers an export first and
-  requires typing a confirmation. Vintages are never merged without explicit confirmation, and
-  stock history is never edited: corrections are new ledger entries.
+- ⚑ **Irreversible**: joining a household merges the joining phone's cellar into it, which
+  can't be undone automatically. Removing a partner can't recall what their phone already
+  has. "Erase this phone" deletes the local copy after an export offer and a typed
+  confirmation. Vintages are never merged without explicit confirmation, and stock history is
+  never edited: corrections are new ledger entries.
 
 ## Known limitations
 
@@ -189,6 +163,10 @@ See the "Status" section of `docs/CHECKLIST.md` for what each milestone has veri
 Things that are by design or deferred:
 
 - No catalogue or market-price integration (above).
-- Conflict resolution is per record (keep mine / keep theirs), not per field.
-- Household roles are owner / editor / viewer per collection; there is no per-bottle sharing.
-- Photos sync after their record; a photo taken offline uploads at the next sync.
+- Sharing is by file in this release: someone taps Send changes. Phone-to-phone sync over home
+  Wi-Fi and a shared Google Drive folder are the next transports (ADR-13).
+- Every partner can edit everything; there are no view-only partners.
+- Opening a `.hovsync` file straight from a messaging app isn't wired up yet; use Receive
+  changes inside the app.
+- The journal keeps every change forever; compaction is planned before it matters (tens of
+  thousands of edits).

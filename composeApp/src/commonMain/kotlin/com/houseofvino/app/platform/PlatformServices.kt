@@ -5,7 +5,6 @@ import androidx.compose.ui.Modifier
 import com.houseofvino.core.money.MoneyFormatStyle
 import com.houseofvino.core.scan.OcrLine
 import com.houseofvino.core.time.IsoDate
-import com.houseofvino.data.remote.BackendConfig
 
 /** A text file the user picked (CSV import). */
 class PickedFile(val name: String, val text: String)
@@ -16,7 +15,10 @@ sealed interface ScanOutput {
     data class LabelText(val lines: List<OcrLine>, val photo: ByteArray?) : ScanOutput
 }
 
-enum class ScanMode { BARCODE, LABEL }
+enum class ScanMode { BARCODE, LABEL, QR }
+
+/** What kind of file the user is picking. */
+enum class PickKind { CSV, SYNC }
 
 /**
  * Everything the shared UI needs from the platform. Implemented in androidMain (Android APIs)
@@ -24,7 +26,6 @@ enum class ScanMode { BARCODE, LABEL }
  */
 interface PlatformServices {
     val platformName: String
-    val backend: BackendConfig?
     val appVersion: String
 
     fun today(): IsoDate
@@ -36,8 +37,8 @@ interface PlatformServices {
     /** Writes [content] to a file and opens the system share sheet. Returns a user-facing error, or null. */
     suspend fun shareText(fileName: String, mimeType: String, content: String): String?
 
-    /** Opens the system file picker for CSV/text files. [onPicked] gets null when cancelled. */
-    fun pickTextFile(onPicked: (PickedFile?) -> Unit)
+    /** Opens the system file picker for a text file ([PickKind.CSV] or a sync file). [onPicked] gets null when cancelled. */
+    fun pickTextFile(kind: PickKind = PickKind.CSV, onPicked: (PickedFile?) -> Unit)
 
     /** Lets the user choose a photo from the library; JPEG bytes or null. */
     fun pickPhoto(onPicked: (ByteArray?) -> Unit)
@@ -55,12 +56,6 @@ interface PlatformServices {
 
     /** Schedules (or clears, when [enabled] is false) drinking-window reminders. */
     fun setWindowReminders(enabled: Boolean, dueCount: Int)
-
-    /** Asks the OS to run a background sync soon (WorkManager / BGTaskScheduler). */
-    fun requestBackgroundSync()
-
-    /** Registers a callback invoked when the network becomes available. */
-    fun onNetworkAvailable(callback: () -> Unit)
 }
 
 /**

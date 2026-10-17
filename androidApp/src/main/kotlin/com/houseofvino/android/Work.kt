@@ -12,39 +12,17 @@ import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
-import androidx.work.BackoffPolicy
-import androidx.work.Constraints
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingPeriodicWorkPolicy
-import androidx.work.ExistingWorkPolicy
-import androidx.work.NetworkType
-import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.houseofvino.data.repo.SettingsRepository
 import java.util.concurrent.TimeUnit
 
-/** WorkManager scheduling. Sync work needs a network; reminders don't. */
+/** WorkManager scheduling for drinking-window reminders. */
 object Work {
-    private const val SYNC_NOW = "sync-now"
-    private const val SYNC_PERIODIC = "sync-periodic"
     private const val REMINDERS = "window-reminders"
-
-    private val network = Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()
-
-    fun syncSoon(context: Context) {
-        val request = OneTimeWorkRequestBuilder<SyncWorker>()
-            .setConstraints(network)
-            .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
-            .build()
-        WorkManager.getInstance(context).enqueueUniqueWork(SYNC_NOW, ExistingWorkPolicy.KEEP, request)
-    }
-
-    fun schedulePeriodicSync(context: Context) {
-        val request = PeriodicWorkRequestBuilder<SyncWorker>(6, TimeUnit.HOURS).setConstraints(network).build()
-        WorkManager.getInstance(context).enqueueUniquePeriodicWork(SYNC_PERIODIC, ExistingPeriodicWorkPolicy.KEEP, request)
-    }
 
     fun scheduleReminders(context: Context) {
         val request = PeriodicWorkRequestBuilder<ReminderWorker>(30, TimeUnit.DAYS).setInitialDelay(1, TimeUnit.DAYS).build()
@@ -53,14 +31,6 @@ object Work {
 
     fun cancelReminders(context: Context) {
         WorkManager.getInstance(context).cancelUniqueWork(REMINDERS)
-    }
-}
-
-class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
-    override suspend fun doWork(): Result {
-        val graph = (applicationContext as HouseOfVinoApp).graph
-        if (graph.syncEngine == null) return Result.success()
-        return if (graph.sync.syncNow()) Result.success() else if (runAttemptCount < 5) Result.retry() else Result.failure()
     }
 }
 

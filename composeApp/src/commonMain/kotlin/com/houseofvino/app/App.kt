@@ -36,7 +36,6 @@ import com.houseofvino.app.ui.design.Hv
 import com.houseofvino.app.ui.design.HvIcons
 import com.houseofvino.app.ui.design.HvTheme
 import com.houseofvino.app.ui.design.LocalMoneyFormat
-import com.houseofvino.app.ui.design.OfflineBanner
 import com.houseofvino.app.ui.navigation.AppNavHost
 import com.houseofvino.app.ui.navigation.CellarRoute
 import com.houseofvino.app.ui.navigation.FirstRunRoute
@@ -62,7 +61,6 @@ private val tabs = listOf(
 fun App(graph: AppGraph) {
     var themeVersion by remember { mutableIntStateOf(0) }
     LaunchedEffect(Unit) {
-        graph.sync.start()
         graph.db.changes.collect { if ("setting" in it) themeVersion++ }
     }
     val preference = remember(themeVersion) { graph.settings.preferences().theme }
@@ -77,7 +75,6 @@ fun App(graph: AppGraph) {
 private fun AppScaffold(graph: AppGraph) {
     val nav = rememberNavController()
     val snackbar = remember { SnackbarHostState() }
-    val sync by graph.sync.state.collectAsState()
     LaunchedEffect(Unit) {
         graph.messenger.messages.collect { m ->
             val result = snackbar.showSnackbar(m.text, m.actionLabel, withDismissAction = m.actionLabel == null,
@@ -120,7 +117,6 @@ private fun AppScaffold(graph: AppGraph) {
         },
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
-            if (sync.signedIn && sync.offline) OfflineBanner(sync.engine.pendingOps)
             AppNavHost(nav, start = if (graph.settings.isOnboarded()) CellarRoute else FirstRunRoute, modifier = Modifier.weight(1f))
         }
     }

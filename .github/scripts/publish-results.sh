@@ -28,6 +28,7 @@ text = open(log, errors="replace").read()
 lines = text.splitlines()
 total = failed = skipped = 0
 failures = []
+per_class = {}
 for path in glob.glob("**/build/test-results/**/*.xml", recursive=True):
     try:
         root = ET.parse(path).getroot()
@@ -35,6 +36,8 @@ for path in glob.glob("**/build/test-results/**/*.xml", recursive=True):
         continue
     for case in root.iter("testcase"):
         total += 1
+        cls = (case.get("classname") or "?").split(".")[-1].split("[")[0]
+        per_class[cls] = per_class.get(cls, 0) + 1
         if case.find("skipped") is not None:
             skipped += 1
         bad = case.find("failure") if case.find("failure") is not None else case.find("error")
@@ -57,7 +60,9 @@ with open(os.path.join(out, "summary.md"), "w") as f:
     if gradle_failures:
         f.write("## Gradle failures\n```\n" + "\n---\n".join(gradle_failures[:20]) + "\n```\n\n")
     if failures:
-        f.write(f"## Failed tests ({failed})\n\n" + "\n\n".join(failures[:100]) + "\n")
+        f.write(f"## Failed tests ({failed})\n\n" + "\n\n".join(failures[:100]) + "\n\n")
+    if per_class:
+        f.write("## Tests per class\n" + "\n".join(f"- {k}: {v}" for k, v in sorted(per_class.items())) + "\n")
 with open(os.path.join(out, "log-tail.txt"), "w") as f:
     f.write("\n".join(lines[-800:]) + "\n")
 PY

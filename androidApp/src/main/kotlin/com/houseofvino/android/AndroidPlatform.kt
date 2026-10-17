@@ -8,8 +8,6 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.ImageDecoder
-import android.net.ConnectivityManager
-import android.net.Network
 import android.net.Uri
 import android.os.Build
 import android.provider.OpenableColumns
@@ -18,11 +16,11 @@ import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
+import com.houseofvino.app.platform.PickKind
 import com.houseofvino.app.platform.PickedFile
 import com.houseofvino.app.platform.PlatformServices
 import com.houseofvino.core.money.MoneyFormatStyle
 import com.houseofvino.core.time.IsoDate
-import com.houseofvino.data.remote.BackendConfig
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -54,10 +52,6 @@ class AndroidPlatform(private val app: Application) : PlatformServices {
     }
 
     override val platformName = "Android"
-
-    override val backend: BackendConfig? =
-        if (BuildConfig.SUPABASE_URL.isBlank() || BuildConfig.SUPABASE_ANON_KEY.isBlank()) null
-        else BackendConfig(BuildConfig.SUPABASE_URL, BuildConfig.SUPABASE_ANON_KEY)
 
     override val appVersion: String = BuildConfig.VERSION_NAME
 
@@ -106,10 +100,15 @@ class AndroidPlatform(private val app: Application) : PlatformServices {
         }
     }
 
-    override fun pickTextFile(onPicked: (PickedFile?) -> Unit) {
+    private var pendingKind = PickKind.CSV
+
+    override fun pickTextFile(kind: PickKind, onPicked: (PickedFile?) -> Unit) {
         val host = activity ?: return onPicked(null)
         pendingText = onPicked
-        host.openDocument.launch(arrayOf("text/*", "application/csv", "application/vnd.ms-excel"))
+        pendingKind = kind
+        // Sync files arrive through messaging apps with whatever type they guessed, so accept any.
+        val types = if (kind == PickKind.SYNC) arrayOf("*/*") else arrayOf("text/*", "application/csv", "application/vnd.ms-excel")
+        host.openDocument.launch(types)
     }
 
     internal fun onDocumentPicked(uri: Uri?) {
@@ -122,7 +121,7 @@ class AndroidPlatform(private val app: Application) : PlatformServices {
                     val size = app.contentResolver.query(uri, arrayOf(OpenableColumns.SIZE), null, null, null)?.use { c ->
                         if (c.moveToFirst() && !c.isNull(0)) c.getLong(0) else null
                     }
-                    require(size == null || size <= MAX_IMPORT_BYTES) { "too large" }
+                    require(size == null || size <= (if (pendingKind == PickKind.SYNC) MAX_SYNC_BYTES else MAX_IMPORT_BYTES)) { "too large" }
                     val name = app.contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c ->
                         if (c.moveToFirst()) c.getString(0) else null
                     } ?: "import.csv"
@@ -198,7 +197,7 @@ class AndroidPlatform(private val app: Application) : PlatformServices {
 
     override fun scanningAvailable(): Boolean = app.packageManager.hasSystemFeature(PackageManager.FEATURE_CAMERA_ANY)
 
-    // ---- Notifications, background work, network ---------------------------------------------
+    // ---- Notifications ---------------------------------------------------------------------------
 
     override fun setWindowReminders(enabled: Boolean, dueCount: Int) {
         // [dueCount] is not used here: the worker recounts at delivery time so the text is never stale.
@@ -215,19 +214,9 @@ class AndroidPlatform(private val app: Application) : PlatformServices {
         }
     }
 
-    override fun requestBackgroundSync() {
-        if (backend?.isConfigured == true) Work.syncSoon(app)
-    }
-
-    override fun onNetworkAvailable(callback: () -> Unit) {
-        val cm = app.getSystemService(ConnectivityManager::class.java) ?: return
-        cm.registerDefaultNetworkCallback(object : ConnectivityManager.NetworkCallback() {
-            override fun onAvailable(network: Network) = callback()
-        })
-    }
-
     private companion object {
         const val MAX_EDGE = 2048
         const val MAX_IMPORT_BYTES = 25L * 1024 * 1024
+        const val MAX_SYNC_BYTES = 150L * 1024 * 1024
     }
 }
