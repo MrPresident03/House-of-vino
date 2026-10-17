@@ -1,35 +1,18 @@
-# jvm-android: success
+# jvm-android: failure
 
-- commit: 1ccd88b997b9438bb8c87adc13a7f5875f07d9dd
-- run: https://github.com/MrPresident03/House-of-vino/actions/runs/39063193936
-- tests: 162 run, 0 failed, 0 skipped
+- commit: 294ba159998ff1956e661cb70aba1f5cc1c732fb
+- run: https://github.com/MrPresident03/House-of-vino/actions/runs/39066517846
+- tests: 0 run, 0 failed, 0 skipped
 
-## Tests per class
-- Base64Test: 4
-- CandidateMatcherTest: 4
-- CellarRepositoryTest: 8
-- CriticalFlowsTest: 4
-- CryptoTest: 10
-- CsvTest: 4
-- DesignTokensTest: 5
-- DuplicateDetectorTest: 2
-- ExchangeRateTest: 7
-- FieldMergeTest: 7
-- FuzzyTest: 3
-- HlcTest: 6
-- HouseholdSyncTest: 15
-- ImportExportTest: 7
-- ImportTest: 8
-- InsightsTest: 3
-- IsoDateTest: 5
-- LabelTextParserTest: 4
-- LedgerTest: 10
-- ModelTest: 7
-- MoneyTest: 10
-- OpenFoodFactsTest: 6
-- QrCodeTest: 3
-- QueryParserTest: 3
-- SchemaTest: 5
-- SearchEngineTest: 8
-- SharingFlowTest: 2
-- TextNormalizerTest: 2
+## Gradle failures
+```
+* What went wrong:
+Error : You cannot add Provider instances to the Android SourceSet API.
+It is not possible for Android Studio to determine if the Provider points
+to a directory that contains generated (read-only) or static (read-write) files. 
+
+Instead you should use the Sources interface in the Variant API, in particular
+SourceDirectories.addGeneratedDirectory and SourceDirectories.addStaticDirectories.
+
+```
+
