@@ -21,7 +21,7 @@ androidx-test-runner = "1.7.0"
 mlkit-barcode = "17.3.0"
 mlkit-text = "16.0.1"
 
-android-compileSdk = "36"
+android-compileSdk = "37"
 android-targetSdk = "36"
 android-minSdk = "30"
 

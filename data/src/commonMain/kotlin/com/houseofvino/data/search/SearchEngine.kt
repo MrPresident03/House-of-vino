@@ -235,8 +235,8 @@ class SearchEngine(private val database: LocalDatabase) {
         }
         if (f.priceMinMinor != null) sql.append(" AND st.price >= ?", f.priceMinMinor)
         if (f.priceMaxMinor != null) sql.append(" AND st.price <= ?", f.priceMaxMinor)
-        if (f.minRating != null) {
-            sql.append(" AND (SELECT max(t.rating) FROM tasting t WHERE t.vintage_id = v.id AND t.deleted_at IS NULL) >= ?", f.minRating.toLong())
+        f.minRating?.let { min ->
+            sql.append(" AND (SELECT max(t.rating) FROM tasting t WHERE t.vintage_id = v.id AND t.deleted_at IS NULL) >= ?", min.toLong())
         }
     }
 
@@ -306,7 +306,7 @@ class SearchEngine(private val database: LocalDatabase) {
         val f = query.filters
         val colors = f.colors + parsed.colors
         if (colors.isNotEmpty()) sql.inList(" AND w.color", colors.map { it.name })
-        if (f.minRating != null) sql.append(" AND t.rating >= ?", f.minRating.toLong())
+        f.minRating?.let { min -> sql.append(" AND t.rating >= ?", min.toLong()) }
         val from = parsed.vintageFrom ?: f.vintageFrom
         val to = parsed.vintageTo ?: f.vintageTo
         if (from != null || to != null) {

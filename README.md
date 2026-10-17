@@ -82,7 +82,7 @@ mistake.
 
 New migrations go in `supabase/migrations/` with a timestamp prefix, and never edit one that
 has been applied. Local database migrations are SQLDelight `.sqm` files in
-`data/src/commonMain/sqldelight/migrations/` (`1.sqm` is the initial schema; add `2.sqm` for
+`data/src/commonMain/sqldelight/com/houseofvino/data/db/` (`1.sqm` is the initial schema; add `2.sqm` for
 the next change). `SchemaTest` checks that the sync registry matches the real schema.
 
 For a fully local stack, `supabase start` runs everything in Docker. The Android emulator

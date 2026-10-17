@@ -164,8 +164,9 @@ class ImportService(
         if (!vintageExisted) s.vintages++
         s.createdVintages[identity.toString()] = vintageId
         if (lot != null) { s.lots++; s.bottles += lot.quantity }
-        if (r.barcode != null && wineId != null) {
-            cellar.linkBarcode(collectionId, r.barcode, if (r.barcode.length == 12) "UPC_A" else "EAN_13", wineId, vintageId, r.formatMl)
+        val code = r.barcode
+        if (code != null && wineId != null) {
+            cellar.linkBarcode(collectionId, code, if (code.length == 12) "UPC_A" else "EAN_13", wineId, vintageId, r.formatMl)
         }
     }
 

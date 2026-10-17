@@ -101,7 +101,7 @@ end;
 $$;
 
 -- ---------------------------------------------------------------------------------------------
--- Synced tables. Columns mirror the client schema (data/src/commonMain/sqldelight/migrations).
+-- Synced tables. Columns mirror the client schema (data/src/commonMain/sqldelight/com/houseofvino/data/db/1.sqm).
 
 create table public.wine (
     id uuid primary key,

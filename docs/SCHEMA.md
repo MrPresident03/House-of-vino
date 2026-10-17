@@ -159,7 +159,7 @@ Server triggers on every syncable table:
 
 ## Migrations
 
-- Local: `data/src/commonMain/sqldelight/migrations/N.sqm`. `DatabaseMigrationTest` runs
+- Local: `data/src/commonMain/sqldelight/com/houseofvino/data/db/N.sqm`. `DatabaseMigrationTest` runs
   1→latest and checks that the schema equals a fresh create.
 - Server: `supabase/migrations/YYYYMMDDHHMMSS_name.sql`, applied by `supabase db push`, and
   tested locally with `supabase/tests/run.sh`.

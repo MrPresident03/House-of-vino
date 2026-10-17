@@ -83,9 +83,11 @@ class WishlistRepository(private val database: LocalDatabase, private val cellar
         database.write {
             val item = requireNotNull(item(itemId)) { "Wishlist item not found" }
             if (!item.status.canTransitionTo(WishlistStatus.ACQUIRED)) throw InvalidStatusChangeException(item.status, WishlistStatus.ACQUIRED)
+            val itemVintage = item.vintageId
+            val itemWine = item.wineId
             val resolvedTarget = target ?: when {
-                item.vintageId != null -> WineTarget.ExistingVintage(item.vintageId)
-                item.wineId != null -> WineTarget.ExistingWine(item.wineId)
+                itemVintage != null -> WineTarget.ExistingVintage(itemVintage)
+                itemWine != null -> WineTarget.ExistingWine(itemWine)
                 else -> WineTarget.NewWine(WineInput(producer = item.producer.orEmpty(), name = item.name))
             }
             val resolvedVintage = vintage ?: VintageInput(item.vintage ?: VintageYear.Unknown)
