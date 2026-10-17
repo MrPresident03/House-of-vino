@@ -46,6 +46,8 @@ targets:
         CODE_SIGN_STYLE: Automatic
         DEVELOPMENT_TEAM: $(HV_DEVELOPMENT_TEAM)
         ENABLE_USER_SCRIPT_SANDBOXING: NO
+        # The Kotlin framework is built for Apple-silicon simulators and devices only.
+        "EXCLUDED_ARCHS[sdk=iphonesimulator*]": x86_64
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         FRAMEWORK_SEARCH_PATHS: ["$(inherited)", "$(SRCROOT)/../composeApp/build/xcode-frameworks/$(CONFIGURATION)/$(SDK_NAME)"]
         # SQLDelight's native driver links the system SQLite.
