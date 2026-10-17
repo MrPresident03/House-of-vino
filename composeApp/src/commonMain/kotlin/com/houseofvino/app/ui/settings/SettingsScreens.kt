@@ -1,5 +1,6 @@
 package com.houseofvino.app.ui.settings
 
+import com.houseofvino.data.catalogue.LwinCatalogue
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -226,7 +227,8 @@ fun RatesScreen(onBack: () -> Unit) {
 
 @Composable
 fun PrivacyScreen(onBack: () -> Unit) {
-    val android = appGraph().platform.platformName == "Android"
+    val platform = appGraph().platform
+    val android = platform.platformName == "Android"
     Column(Modifier.fillMaxSize()) {
         HvTopBar("Privacy", onBack = onBack)
         Column(Modifier.verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -237,9 +239,15 @@ fun PrivacyScreen(onBack: () -> Unit) {
                 P("The scanner uses Google ML Kit, which runs on your device. ML Kit may send Google technical diagnostics (device and app details, how the scanner performed). It doesn't send camera images or the text it reads.")
             }
             P("Barcode lookups send only the barcode number to Open Food Facts, an open product database. Online discovery sends your search words to the same service.")
+            P("Wine details suggested from a scan come from the LWIN catalogue built into the app, so matching a label sends nothing anywhere.")
             P("Photos you attach stay on this phone, and travel to your partner's phone inside the encrypted files if you choose to include them.")
             P("The app has no advertising and no analytics of its own.")
             P("You can export everything at any time, and Erase this phone deletes it from this phone.")
+            Text("Data sources", style = Hv.type.label, color = Hv.colors.inkMuted)
+            P(LwinCatalogue.ATTRIBUTION)
+            TextButton(onClick = { platform.openUrl("https://creativecommons.org/licenses/by/4.0/") }) { Text("Read the CC BY 4.0 licence") }
+            TextButton(onClick = { platform.openUrl("https://www.liv-ex.com/lwin/") }) { Text("About LWIN (Liv-ex)") }
+            P("Barcode details: Open Food Facts, licensed ODbL.")
         }
     }
 }

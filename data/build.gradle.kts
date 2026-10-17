@@ -66,3 +66,19 @@ sqldelight {
         }
     }
 }
+
+// The bundled wine catalogue (ADR-14, docs/CATALOGUE.md): tools/lwin/lwin.tsv.gz -> build/catalogue/lwin.db,
+// built with the same text normaliser the app searches with.
+val catalogueSource = rootProject.layout.projectDirectory.file("tools/lwin/lwin.tsv.gz")
+val cataloguePack = layout.buildDirectory.file("catalogue/lwin.db")
+val buildCataloguePack by tasks.registering(JavaExec::class) {
+    group = "build"
+    description = "Builds the LWIN catalogue pack shipped in the apps."
+    val jvmMain = kotlin.jvm().compilations.getByName("main")
+    dependsOn(jvmMain.compileTaskProvider)
+    classpath = files(jvmMain.output.allOutputs, jvmMain.runtimeDependencyFiles)
+    mainClass.set("com.houseofvino.data.catalogue.BuildCataloguePackKt")
+    inputs.file(catalogueSource)
+    outputs.file(cataloguePack)
+    args(catalogueSource.asFile.absolutePath, cataloguePack.get().asFile.absolutePath)
+}

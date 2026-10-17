@@ -129,6 +129,7 @@ providers' pages before relying on them.
 | Service | Used for | Cost | Credentials | Notes |
 |---|---|---|---|---|
 | Open Food Facts | Barcode lookup and the *Discover* search scope | Free | None. Requests send a `User-Agent`; set a real contact address in `OpenFoodFactsBarcodeLookup.DEFAULT_USER_AGENT` before release | Data under the **ODbL** (attribution shown with results; share-alike applies to any database built from it) ⚑. Limits: 15 product reads and 10 searches per minute per user. The app stays below them and only searches when asked |
+| LWIN (Liv-ex) | Wine catalogue bundled in the app: a scanned label fills producer, wine, colour, style and region (docs/CATALOGUE.md) | Free | None. Runs on the phone, no network | **CC BY 4.0** ⚑: credit Liv-ex, link the licence, note changes (shown on Privacy › Data sources and under matches). No prices, ratings, vintages or barcodes |
 | Google ML Kit (Android) | On-device barcode and text recognition | Free | None | Models are bundled. Google may receive diagnostics (no images or text) ⚑; disclose in the Play *Data safety* form |
 | Apple Vision / AVFoundation (iOS) | On-device barcode and text recognition | Free | None | |
 | GitHub Actions | CI | Included minutes on your plan for private repositories, then per-minute billing; macOS minutes cost several times Linux minutes ⚑ | Built-in `GITHUB_TOKEN` | The iOS job is opt-in for that reason |
@@ -149,7 +150,7 @@ The full reasoning is in `docs/ADR.md`; the short version:
   so it's meant to be shown in person. Android device backups exclude the cellar (ADR-11), so
   backup is a partner's phone or CSV export. Label OCR runs on the device.
 - ⚑ **Recurring cost**: none to run the app; GitHub Actions minutes for CI.
-- ⚑ **Licensing**: Open Food Facts data is ODbL. Fonts (Bodoni Moda, IBM Plex Sans) are under
+- ⚑ **Licensing**: The LWIN catalogue is CC BY 4.0 (ADR-14). Open Food Facts data is ODbL. Fonts (Bodoni Moda, IBM Plex Sans) are under
   the SIL Open Font License; the licence files are in `composeApp/licenses/`.
 - ⚑ **Irreversible**: joining a household merges the joining phone's cellar into it, which
   can't be undone automatically. Removing a partner can't recall what their phone already

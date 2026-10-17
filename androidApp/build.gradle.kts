@@ -49,3 +49,13 @@ dependencies {
     implementation(libs.compose.ui)
     androidTestImplementation(libs.androidx.test.runner)
 }
+
+// Ship the catalogue pack as an asset (ADR-14).
+val catalogueAssets = layout.buildDirectory.dir("generated/catalogueAssets")
+val copyCataloguePack by tasks.registering(Copy::class) {
+    dependsOn(":data:buildCataloguePack")
+    from(project(":data").layout.buildDirectory.file("catalogue/lwin.db"))
+    into(catalogueAssets)
+}
+android.sourceSets.getByName("main").assets.srcDir(catalogueAssets)
+tasks.named("preBuild") { dependsOn(copyCataloguePack) }

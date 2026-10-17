@@ -19,6 +19,10 @@ targets:
     platform: iOS
     sources:
       - path: iosApp
+      # The LWIN catalogue pack (ADR-14), built by the Gradle step below before resources are copied.
+      - path: ../data/build/catalogue/lwin.db
+        optional: true
+        buildPhase: resources
     info:
       path: iosApp/Info.plist
       properties:
@@ -54,7 +58,7 @@ targets:
             exit 0
           fi
           cd "$SRCROOT/.."
-          ./gradlew :composeApp:embedAndSignAppleFrameworkForXcode
+          ./gradlew :data:buildCataloguePack :composeApp:embedAndSignAppleFrameworkForXcode
         basedOnDependencyAnalysis: false
 schemes:
   HouseOfVino:

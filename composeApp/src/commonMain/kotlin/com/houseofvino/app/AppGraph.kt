@@ -5,6 +5,8 @@ import com.houseofvino.app.platform.PlatformServices
 import com.houseofvino.core.id.IdGenerator
 import com.houseofvino.core.money.CurrencyConverter
 import com.houseofvino.core.time.Clock
+import com.houseofvino.data.catalogue.UnavailableCatalogue
+import com.houseofvino.data.catalogue.WineCatalogue
 import com.houseofvino.data.db.DatabaseFactory
 import com.houseofvino.data.db.LocalDatabase
 import com.houseofvino.data.integrations.BarcodeLookupService
@@ -38,6 +40,7 @@ class AppGraph(
     clock: Clock = Clock.System,
     ids: IdGenerator = IdGenerator.Random,
     barcodeLookup: BarcodeLookupService? = null,
+    catalogue: () -> WineCatalogue = { UnavailableCatalogue },
 ) {
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     val messenger = Messenger()
@@ -61,6 +64,9 @@ class AppGraph(
 
     /** Barcode lookup is an external service (Open Food Facts, ODbL); manual entry always works. */
     val barcodes: BarcodeLookupService = barcodeLookup ?: OpenFoodFactsBarcodeLookup.createOrNull() ?: UnavailableBarcodeLookup
+
+    /** The bundled LWIN wine catalogue (ADR-14). Opened on first use: the first open copies the pack. */
+    val catalogue: WineCatalogue by lazy(catalogue)
 
     /** The active collection. Changes when this phone joins a household or is erased. */
     var collectionId: String = ensureLocalCollection()

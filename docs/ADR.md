@@ -252,3 +252,23 @@ through storage the users already own. Protocol details are in `docs/SYNC.md`.
   phone" wipes local data. Without a cloud transport, a household's copies live only on its
   phones; each partner's phone is the other's backup.
 
+
+## ADR-14 Bundled LWIN wine catalogue ⚑ external data licensing
+
+Decision (2026-10-18): scanned labels (and barcode product names) are matched against the
+LWIN database from Liv-ex, shipped inside the app as a read-only SQLite pack.
+
+- Licence: CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/legalcode), accepted by the
+  owner. The app credits "LWIN by Liv-ex, licensed CC BY 4.0", links the licence, and states
+  the adaptation (spirits and retired codes removed, reformatted for search). The credit appears
+  on Privacy › Data sources and under every catalogue match.
+- What it fills: producer, wine, colour, style, country, region, sub-region. LWIN has no
+  barcodes, prices, ratings, drinking windows or vintages, so none of those come from it.
+  Vintage, size and alcohol stay with the label; barcodes stay with the user's confirmed
+  mappings and Open Food Facts.
+- Honesty: a catalogue match is never stored as fact. The best match is applied only when it is
+  unambiguous, at MEDIUM confidence, and every field is reviewed in the editor before saving.
+- Cost: none. Matching runs on the phone with no network. The pack adds about 10 MB to the
+  download and roughly 40 MB once copied out on first use.
+- Updating: download a new workbook from Liv-ex, run `tools/lwin/extract.py`, commit
+  `tools/lwin/lwin.tsv.gz`. See docs/CATALOGUE.md.

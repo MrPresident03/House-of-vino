@@ -43,6 +43,9 @@ import com.houseofvino.core.scan.MatchCandidate
 import com.houseofvino.core.scan.Suggested
 import com.houseofvino.core.scan.WineSuggestion
 import com.houseofvino.data.integrations.LookupResult
+import com.houseofvino.data.catalogue.CatalogueMatch
+import com.houseofvino.data.catalogue.LwinCatalogue
+import com.houseofvino.core.scan.Confidence
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -58,6 +61,11 @@ sealed interface ScanState {
         val source: String,
         val note: String?,
         val photo: ByteArray?,
+        /** What the label or barcode service gave, before any catalogue wine was applied. */
+        val read: WineSuggestion = suggestion,
+        val catalogue: List<CatalogueMatch> = emptyList(),
+        val selectedLwin: Long? = null,
+        val catalogueNote: String? = null,
     ) : ScanState
 }
 
@@ -69,35 +77,73 @@ class ScanViewModel(graph: AppGraph) : GraphViewModel(graph) {
     fun onUnavailable() { _state.value = ScanState.Unavailable }
     fun retry() { _state.value = ScanState.Camera }
 
+    private var existing: List<ExistingVintage> = emptyList()
+    private var mappings: List<BarcodeMapping> = emptyList()
+
+    /** Applies a catalogue wine (or none) to what was read, and re-checks the cellar for it. */
+    fun selectCatalogue(lwin: Long?) {
+        val r = _state.value as? ScanState.Results ?: return
+        val match = r.catalogue.firstOrNull { it.wine.lwin == lwin }
+        launchIo {
+            val suggestion = merge(r.read, match)
+            val candidates = CandidateMatcher.match(suggestion, existing, mappings, formatsByVintage(existing))
+            _state.value = r.copy(suggestion = suggestion, candidates = candidates, selectedLwin = match?.wine?.lwin)
+        }
+    }
+
+    private suspend fun withCatalogue(r: ScanState.Results, text: String): ScanState.Results {
+        val catalogue = graph.catalogue
+        if (!catalogue.available || text.isBlank()) return r
+        val year = (r.read.vintage?.value as? VintageYear.Year)?.year
+        val matches = io { catalogue.match(text, year) }
+        val auto = matches.firstOrNull()?.takeIf { it.confidence == Confidence.MEDIUM }
+        val suggestion = merge(r.read, auto)
+        val candidates = if (auto == null) r.candidates else CandidateMatcher.match(suggestion, existing, mappings, formatsByVintage(existing))
+        val note = when {
+            matches.isEmpty() -> "No match in the wine catalogue."
+            auto != null -> "Filled from the wine catalogue. Check it's the right wine."
+            else -> "Possible catalogue matches. Pick one to fill in the details."
+        }
+        return r.copy(suggestion = suggestion, candidates = candidates, catalogue = matches, selectedLwin = auto?.wine?.lwin, catalogueNote = note)
+    }
+
     fun onResult(output: ScanOutput) {
         if (_state.value != ScanState.Camera) return
         _state.value = ScanState.Working
         launchIo {
-            val existing = io {
+            existing = io {
                 db.catalog.identityIndex(collectionId).executeAsList().map {
                     ExistingVintage(it.vintage_id, it.wine_id, it.producer, it.name, VintageYear.fromStorage(it.vintage_kind, it.year?.toInt()))
                 }
             }
             when (output) {
                 is ScanOutput.Barcode -> {
-                    val mappings = io {
+                    mappings = io {
                         db.catalog.barcodesForCode(collectionId, output.value).executeAsList()
                             .map { BarcodeMapping(it.code, it.wine_id, it.vintage_id, it.format_ml?.toInt()) }
                     }
                     // Our own confirmed mapping first; the external database only fills gaps.
+                    var productText = ""
                     val (suggestion, note) = when (val r = graph.barcodes.lookup(output.value)) {
-                        is LookupResult.Found -> r.products.first().toSuggestion().copy(barcode = output.value) to r.attribution
+                        is LookupResult.Found -> {
+                            val p = r.products.first()
+                            productText = listOfNotNull(p.brand, p.productName).joinToString(" ")
+                            p.toSuggestion().copy(barcode = output.value) to r.attribution
+                        }
                         LookupResult.NotFound -> WineSuggestion(barcode = output.value) to "This barcode isn't in Open Food Facts."
                         is LookupResult.Unavailable -> WineSuggestion(barcode = output.value) to r.reason
                     }
                     val candidates = CandidateMatcher.match(suggestion, existing, mappings, formatsByVintage(existing))
-                    _state.value = ScanState.Results(suggestion, candidates, "Barcode ${output.value}", note, null)
+                    // A barcode you've already confirmed beats any catalogue guess.
+                    val base = ScanState.Results(suggestion, candidates, "Barcode ${output.value}", note, null)
+                    _state.value = if (candidates.any { it.vintageConfirmed }) base else withCatalogue(base, productText)
                 }
                 is ScanOutput.LabelText -> {
                     val suggestion = LabelTextParser.parse(output.lines, graph.platform.currentYear())
                     val candidates = CandidateMatcher.match(suggestion, existing, emptyList(), formatsByVintage(existing))
-                    _state.value = ScanState.Results(suggestion, candidates, "Label",
+                    val base = ScanState.Results(suggestion, candidates, "Label",
                         if (suggestion.isEmpty) "Couldn't read much from the label. Try again in better light, or enter the details." else null, output.photo)
+                    _state.value = withCatalogue(base, output.lines.joinToString("\n") { it.text })
                 }
             }
         }
@@ -105,6 +151,16 @@ class ScanViewModel(graph: AppGraph) : GraphViewModel(graph) {
 
     private suspend fun formatsByVintage(existing: List<ExistingVintage>): Map<String, Set<Int>> = io {
         existing.associate { e -> e.vintageId to db.inventory.lotsForVintage(e.vintageId).executeAsList().map { it.format_ml.toInt() }.toSet() }
+    }
+
+    private fun merge(read: WineSuggestion, match: CatalogueMatch?): WineSuggestion {
+        if (match == null) return read
+        val c = match.wine.toSuggestion(match.confidence)
+        return read.copy(
+            producer = c.producer ?: read.producer, name = c.name ?: read.name,
+            color = c.color ?: read.color, style = c.style ?: read.style,
+            country = c.country ?: read.country, region = c.region ?: read.region, appellation = c.appellation ?: read.appellation,
+        )
     }
 
     fun prefillKey(r: ScanState.Results): String = graph.handoff.put(ScanPrefill(r.suggestion, r.photo))
@@ -169,7 +225,25 @@ private fun Results(
             }
         }
 
-        SectionHeader("What was read")
+        if (s.catalogue.isNotEmpty() || s.catalogueNote != null) {
+            SectionHeader("Wine catalogue")
+            s.catalogueNote?.let { Text(it, style = Hv.type.caption, color = Hv.colors.inkMuted, modifier = Modifier.padding(horizontal = 16.dp)) }
+            s.catalogue.forEach { m ->
+                val selected = m.wine.lwin == s.selectedLwin
+                Column(Modifier.fillMaxWidth().clickable { vm.selectCatalogue(if (selected) null else m.wine.lwin) }
+                    .padding(horizontal = 16.dp, vertical = 10.dp)) {
+                    Text((if (selected) "✓ " else "") + m.wine.displayName, style = Hv.type.body, color = if (selected) Hv.colors.accent else Hv.colors.ink)
+                    Text(listOfNotNull(m.wine.colour, m.wine.subType, m.wine.region, m.wine.country).joinToString(" · "), style = Hv.type.caption, color = Hv.colors.inkMuted)
+                    Text(m.reasons.joinToString(" · "), style = Hv.type.caption, color = Hv.colors.inkMuted)
+                    m.warnings.forEach { Text(it, style = Hv.type.caption, color = Hv.colors.drinkSoon) }
+                    Text(if (selected) "Using this wine. Tap to undo." else "Use this wine", style = Hv.type.label, color = Hv.colors.accent)
+                }
+                HorizontalDivider(Modifier.padding(start = 16.dp), color = Hv.colors.outline)
+            }
+            if (s.catalogue.isNotEmpty()) Text(LwinCatalogue.ATTRIBUTION, style = Hv.type.caption, color = Hv.colors.inkMuted, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
+        }
+
+        SectionHeader("Details to use")
         val sg = s.suggestion
         Field("Producer", sg.producer)
         Field("Wine", sg.name)
@@ -177,7 +251,10 @@ private fun Results(
         Field("Size", sg.formatMl?.let { Suggested(BottleFormats.nameFor(it.value), it.confidence, it.source) })
         Field("Alcohol", sg.abvBasisPoints?.let { Suggested("${it.value / 100}.${(it.value % 100).toString().padStart(2, '0')}%", it.confidence, it.source) })
         Field("Appellation", sg.appellation)
+        Field("Region", sg.region)
         Field("Country", sg.country)
+        Field("Colour", sg.color?.let { Suggested(it.name.lowercase().replaceFirstChar(Char::uppercase), it.confidence, it.source) })
+        Field("Style", sg.style?.let { Suggested(it.name.lowercase().replaceFirstChar(Char::uppercase), it.confidence, it.source) })
         if (sg.isEmpty) Text("Nothing readable yet.", style = Hv.type.bodyDense, color = Hv.colors.inkMuted, modifier = Modifier.padding(horizontal = 16.dp))
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             HvButton("Add as a new wine", { onUseDetails(vm.prefillKey(s)) }, Modifier.fillMaxWidth())
