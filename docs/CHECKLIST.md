@@ -5,18 +5,19 @@ Legend: `[ ]` not started · `[~]` in progress · `[x]` done and tested · `(T)`
 A box is only ticked when the feature works end-to-end on real data with tests. A UI
 placeholder, sample data or a button without real behaviour stays unticked (spec §9).
 
-## Status (2026-10-17)
+## Status (2026-10-18)
 
 CI is green on Linux and macOS:
-- **jvm-android**: 129 tests (core, data incl. sync engine, import/export and the 5,000-bottle
-  search test, composeApp design tokens and end-to-end UI flows on the desktop JVM); the
-  Android debug APK builds.
-- **ios**: the same core and data tests on the iOS simulator with the system SQLite (120), and
-  the Xcode app builds for the simulator.
+- **jvm-android**: 162 tests: core (crypto vectors, QR encoder, merge rules), data (including
+  15 household sync scenarios with two and three phones and the 5,000-bottle search test) and
+  composeApp (design tokens, critical flows, sharing flows) on the desktop JVM; the Android
+  debug APK builds.
+- **ios**: the core and data tests on the iOS simulator with the system SQLite, and the Xcode
+  app builds for the simulator.
 
 `[x]` means covered by those automated tests. Platform features that need a camera, file
-pickers, notifications or background execution stay `[~]` until the manual device pass at
-the end of this file has been done on real phones.
+pickers, the share sheet or notifications stay `[~]` until the manual device pass at the end
+of this file has been done on real phones.
 
 ## M1 Project and CI
 - [x] Gradle multi-module KMP build (core, data, composeApp, androidApp) + version catalog
@@ -44,12 +45,12 @@ the end of this file has been done on real phones.
 - [x] 5,000-bottle performance test (search p95 and list paging) (T)
 
 ## M4 Household sync without a server (ADR-13)
-- [~] Change journal recorded with every write; one-time journaling of pre-existing rows (T)
-- [~] Ingest in clock order with causal gap detection, field merge, conflicts, negative-stock flags (T)
-- [~] Encrypted, text-armoured sync files; household key, invites, safety code (T)
-- [~] Join with merge of the joining phone's cellar (re-keying) (T)
-- [~] Remove partner (key rotation), stop sharing, erase phone with new device identity (T)
-- [~] Two- and three-phone convergence under random edits, lost and duplicated files (T)
+- [x] Change journal recorded with every write; one-time journaling of pre-existing rows (T)
+- [x] Ingest in clock order with causal gap detection, field merge, conflicts, negative-stock flags (T)
+- [x] Encrypted, text-armoured sync files; household key, invites, safety code (T)
+- [x] Join with merge of the joining phone's cellar (re-keying) (T)
+- [x] Remove partner (key rotation), stop sharing, erase phone with new device identity (T)
+- [x] Two- and three-phone convergence under random edits, lost and duplicated files (T)
 - [ ] Phone-to-phone sync on home Wi-Fi
 - [ ] Shared Google Drive folder transport
 - [ ] Journal compaction
