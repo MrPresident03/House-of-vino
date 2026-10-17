@@ -159,6 +159,9 @@ class SearchEngineTest {
         assertEquals(5000, app.insights.compute(c, year, null, null, IsoDate.of(2026, 10, 17)).totals.bottles)
 
         val queries = listOf("bordeaux", "pinot", "producer 12", "cuvee 3 1999", "rioja tempranillo", "burgundy pinot noir 2010", "champagne")
+        // Warm-up: the first query on a fresh JVM pays for class loading and JIT, which a phone's
+        // precompiled app doesn't.
+        cellar("mosel", limit = 50)
         val timings = queries.map { q ->
             val mark = TimeSource.Monotonic.markNow()
             val page = cellar(q, limit = 50)
@@ -174,10 +177,11 @@ class SearchEngineTest {
             cellar("pinot", SearchFilters(windows = setOf(WindowFilter.READY), vintageFrom = 1990, vintageTo = 2015), limit = 50)
             mark.elapsedNow().inWholeMilliseconds
         }
-        println("PERF load=${loadTime.inWholeMilliseconds}ms text=$timings sorted=$sorted filtered=${filtered}ms")
+        val report = "load=${loadTime.inWholeMilliseconds}ms text=$timings sorted=$sorted filtered=${filtered}ms"
+        println("PERF $report")
         // Generous ceilings for CI machines; typical results are far lower.
-        assertTrue(timings.max() < 1500, "text search p100 ${timings.max()} ms")
-        assertTrue(sorted.max() < 1500, "sorted paging p100 ${sorted.max()} ms")
-        assertTrue(filtered < 1500, "filtered search $filtered ms")
+        assertTrue(timings.max() < 1500, "text search p100 ${timings.max()} ms ($report)")
+        assertTrue(sorted.max() < 1500, "sorted paging p100 ${sorted.max()} ms ($report)")
+        assertTrue(filtered < 1500, "filtered search $filtered ms ($report)")
     }
 }
