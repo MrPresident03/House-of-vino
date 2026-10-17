@@ -162,26 +162,29 @@ class SearchEngineTest {
         // Warm-up: the first query on a fresh JVM pays for class loading and JIT, which a phone's
         // precompiled app doesn't.
         cellar("mosel", limit = 50)
-        val timings = queries.map { q ->
+        // Each query is timed three times and the median kept: CI runs other test suites in
+        // parallel on two CPUs, and a single stalled run says nothing about the query.
+        fun median(block: () -> Unit): Long = List(3) {
             val mark = TimeSource.Monotonic.markNow()
-            val page = cellar(q, limit = 50)
-            assertTrue(page.total > 0, "\"$q\" finds something")
+            block()
             mark.elapsedNow().inWholeMilliseconds
+        }.sorted()[1]
+        val timings = queries.map { q ->
+            assertTrue(cellar(q, limit = 50).total > 0, "\"$q\" finds something")
+            median { cellar(q, limit = 50) }
         }
         val sorted = listOf(SortOrder.PRODUCER, SortOrder.VINTAGE_DESC, SortOrder.PRICE_DESC, SortOrder.DRINK_BY).map { s ->
-            val mark = TimeSource.Monotonic.markNow()
-            cellar(sort = s, limit = 50, offset = 1000)
-            mark.elapsedNow().inWholeMilliseconds
+            median { cellar(sort = s, limit = 50, offset = 1000) }
         }
-        val filtered = TimeSource.Monotonic.markNow().let { mark ->
+        val filtered = median {
             cellar("pinot", SearchFilters(windows = setOf(WindowFilter.READY), vintageFrom = 1990, vintageTo = 2015), limit = 50)
-            mark.elapsedNow().inWholeMilliseconds
         }
         val report = "load=${loadTime.inWholeMilliseconds}ms text=$timings sorted=$sorted filtered=${filtered}ms"
         println("PERF $report")
         // Generous ceilings for CI machines; typical results are far lower.
-        assertTrue(timings.max() < 1500, "text search p100 ${timings.max()} ms ($report)")
-        assertTrue(sorted.max() < 1500, "sorted paging p100 ${sorted.max()} ms ($report)")
-        assertTrue(filtered < 1500, "filtered search $filtered ms ($report)")
+        assertTrue(timings.max() < 1000, "slowest text search ${timings.max()} ms ($report)")
+        assertTrue(timings.sorted()[timings.size / 2] < 500, "typical text search ${timings.sorted()[timings.size / 2]} ms ($report)")
+        assertTrue(sorted.max() < 1000, "sorted paging ${sorted.max()} ms ($report)")
+        assertTrue(filtered < 1000, "filtered search $filtered ms ($report)")
     }
 }
