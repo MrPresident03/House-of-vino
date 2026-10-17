@@ -12,6 +12,7 @@ import platform.Foundation.NSDate
 import platform.Foundation.dateWithTimeIntervalSinceNow
 
 /** BGTaskScheduler wiring. The identifier is declared in Info.plist (BGTaskSchedulerPermittedIdentifiers). */
+@OptIn(kotlinx.cinterop.ExperimentalForeignApi::class)
 object BackgroundSync {
     const val TASK_ID = "com.houseofvino.sync"
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)

@@ -43,7 +43,6 @@ import platform.AVFoundation.AVMetadataObjectTypeEAN13Code
 import platform.AVFoundation.AVMetadataObjectTypeEAN8Code
 import platform.AVFoundation.AVMetadataObjectTypeUPCECode
 import platform.AVFoundation.authorizationStatusForMediaType
-import platform.AVFoundation.defaultDeviceWithMediaType
 import platform.AVFoundation.fileDataRepresentation
 import platform.AVFoundation.requestAccessForMediaType
 import platform.CoreGraphics.CGRectMake

@@ -9,7 +9,6 @@ import kotlinx.cinterop.useContents
 import kotlinx.cinterop.usePinned
 import platform.AVFoundation.AVCaptureDevice
 import platform.AVFoundation.AVMediaTypeVideo
-import platform.AVFoundation.defaultDeviceWithMediaType
 import platform.CoreGraphics.CGRectMake
 import platform.CoreGraphics.CGSizeMake
 import platform.Foundation.NSBundle
@@ -38,6 +37,7 @@ import platform.Foundation.currentLocale
 import platform.Foundation.dataWithBytes
 import platform.Foundation.dataWithContentsOfFile
 import platform.Foundation.localTimeZone
+import platform.Foundation.secondsFromGMT
 import platform.Foundation.stringWithContentsOfURL
 import platform.Foundation.writeToFile
 import platform.Network.nw_path_get_status
@@ -53,6 +53,7 @@ import platform.PhotosUI.PHPickerViewController
 import platform.PhotosUI.PHPickerViewControllerDelegateProtocol
 import platform.UIKit.UIAccessibilityIsReduceMotionEnabled
 import platform.UIKit.UIActivityViewController
+import platform.UIKit.popoverPresentationController
 import platform.UIKit.UIApplication
 import platform.UIKit.UIApplicationOpenSettingsURLString
 import platform.UIKit.UIDocumentPickerDelegateProtocol
@@ -191,9 +192,9 @@ class IosPlatform : PlatformServices {
         center.requestAuthorizationWithOptions(UNAuthorizationOptionAlert or UNAuthorizationOptionBadge) { granted, _ ->
             if (!granted) return@requestAuthorizationWithOptions
             val content = UNMutableNotificationContent().apply {
-                title = "Drinking windows"
+                setTitle("Drinking windows")
                 // iOS can't recount at delivery time, so the text stays generic rather than going stale.
-                body = "See which bottles are nearing the end of their drinking window."
+                setBody("See which bottles are nearing the end of their drinking window.")
             }
             val date = NSDateComponents().apply { day = 1; hour = 10 }
             val trigger = UNCalendarNotificationTrigger.triggerWithDateMatchingComponents(date, repeats = true)
