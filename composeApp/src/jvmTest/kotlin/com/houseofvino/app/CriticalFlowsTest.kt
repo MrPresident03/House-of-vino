@@ -2,7 +2,9 @@ package com.houseofvino.app
 
 import androidx.compose.ui.test.ComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasTestTag
@@ -10,7 +12,6 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.runComposeUiTest
@@ -39,6 +40,16 @@ class CriticalFlowsTest {
 
     private fun ComposeUiTest.waitForText(text: String) = waitFor(hasText(text))
 
+    /**
+     * Clicks on the UI thread. Navigation updates lifecycles, which must happen on the main
+     * thread; performClick() on desktop runs the handler on the test thread.
+     */
+    private fun ComposeUiTest.click(node: SemanticsNodeInteraction) {
+        val target = node.fetchSemanticsNode()
+        runOnUiThread { target.config[SemanticsActions.OnClick].action?.invoke() }
+        waitForIdle()
+    }
+
     private fun ComposeUiTest.waitForBottleCount(n: Int) =
         waitFor(hasText(n.toString()) and hasAnyAncestor(hasTestTag("bottle-count")))
 
@@ -51,28 +62,28 @@ class CriticalFlowsTest {
         val graph = testGraph()
         setContent { App(graph) }
 
-        onNodeWithText("Start with an empty cellar").performScrollTo().performClick()
+        click(onNodeWithText("Start with an empty cellar").performScrollTo())
         waitForText("Your cellar is empty")
-        onNodeWithText("Add wine").performClick()
+        click(onNodeWithText("Add wine"))
         waitForText("Enter details")
-        onNodeWithText("Enter details").performClick()
+        click(onNodeWithText("Enter details"))
 
         waitFor(hasTestTag("field-producer"))
         onNodeWithTag("field-producer").performTextInput("Château Test")
         onNodeWithText("Vintage year").performTextInput("2015")
-        onNodeWithContentDescription("Add one").performScrollTo().performClick()
-        onNodeWithContentDescription("Add one").performClick()
-        onNodeWithTag("save-wine").performScrollTo().performClick()
+        click(onNodeWithContentDescription("Add one").performScrollTo())
+        click(onNodeWithContentDescription("Add one"))
+        click(onNodeWithTag("save-wine").performScrollTo())
 
         waitForBottleCount(3)
         assertEquals(3, graph.totalBottles())
 
-        onNodeWithText("Drink").performClick()
+        click(onNodeWithText("Drink"))
         waitFor(hasTestTag("stock-submit"))
-        onNodeWithTag("stock-submit").performScrollTo().performClick() // "Continue to note"
+        click(onNodeWithTag("stock-submit").performScrollTo()) // "Continue to note"
         waitFor(hasTestTag("save-tasting"))
         onNodeWithTag("tasting-notes").performTextInput("Cedar, graphite, still tight.")
-        onNodeWithTag("save-tasting").performScrollTo().performClick()
+        click(onNodeWithTag("save-tasting").performScrollTo())
 
         waitUntil(timeoutMillis = timeout) { graph.totalBottles() == 2L }
         assertEquals(1L, graph.db.queryLong("SELECT count(*) FROM tasting"))
@@ -96,7 +107,7 @@ class CriticalFlowsTest {
         setContent { App(graph) }
 
         waitForText("Search")
-        onNodeWithText("Search").performClick()
+        click(onNodeWithText("Search"))
         waitFor(hasTestTag("search-field"))
 
         onNodeWithTag("search-field").performTextInput("pulig")
@@ -115,7 +126,7 @@ class CriticalFlowsTest {
         setContent { App(graph) }
 
         waitForText("Search")
-        onNodeWithText("Search").performClick()
+        click(onNodeWithText("Search"))
         waitFor(hasTestTag("search-field"))
         onNodeWithTag("search-field").performTextInput("margeaux")
         waitFor(hasContentDescription("Château Margaux", substring = true))
