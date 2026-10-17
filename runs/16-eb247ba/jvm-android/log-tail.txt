@@ -1,0 +1,213 @@
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/9.7.1/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+Calculating task graph as no cached configuration is available for tasks: :core:jvmTest :data:jvmTest :composeApp:jvmTest :androidApp:assembleDebug
+Type-safe project accessors is an incubating feature.
+
+> Configure project :composeApp
+WARNING: The 'commonTest' source directory exists, but android host tests are not enabled. To enable android host tests, add `withHostTest {}` to your android target configuration in the Gradle build file.
+Add android.sync.suppressAgpWarnings=GENERIC to the gradle.properties file to suppress this warning.
+
+> Configure project :core
+WARNING: The 'commonTest' source directory exists, but android host tests are not enabled. To enable android host tests, add `withHostTest {}` to your android target configuration in the Gradle build file.
+Add android.sync.suppressAgpWarnings=GENERIC to the gradle.properties file to suppress this warning.
+
+> Configure project :data
+WARNING: The 'commonTest' source directory exists, but android host tests are not enabled. To enable android host tests, add `withHostTest {}` to your android target configuration in the Gradle build file.
+Add android.sync.suppressAgpWarnings=GENERIC to the gradle.properties file to suppress this warning.
+
+> Task :core:jvmProcessResources NO-SOURCE
+> Task :core:jvmTestProcessResources NO-SOURCE
+> Task :data:kmpPartiallyResolvedDependenciesChecker
+> Task :core:kmpPartiallyResolvedDependenciesChecker
+> Task :core:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :core:processJvmMainResources SKIPPED
+> Task :core:processJvmTestResources SKIPPED
+> Task :data:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :data:jvmProcessResources NO-SOURCE
+> Task :data:jvmTestProcessResources NO-SOURCE
+> Task :data:processJvmMainResources SKIPPED
+> Task :data:processJvmTestResources SKIPPED
+> Task :composeApp:kmpPartiallyResolvedDependenciesChecker
+> Task :composeApp:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :composeApp:convertXmlValueResourcesForCommonMain NO-SOURCE
+> Task :composeApp:checkJvmMainComposeLibrariesCompatibility
+> Task :composeApp:convertXmlValueResourcesForJvmMain NO-SOURCE
+> Task :composeApp:copyNonXmlValueResourcesForJvmMain NO-SOURCE
+> Task :composeApp:prepareComposeResourcesTaskForJvmMain NO-SOURCE
+> Task :composeApp:generateResourceAccessorsForJvmMain NO-SOURCE
+> Task :composeApp:copyNonXmlValueResourcesForCommonMain
+> Task :composeApp:prepareComposeResourcesTaskForCommonMain
+> Task :composeApp:generateComposeResClass
+> Task :composeApp:generateExpectResourceCollectorsForCommonMain
+> Task :composeApp:checkJvmTestComposeLibrariesCompatibility
+> Task :composeApp:generateResourceAccessorsForCommonMain
+> Task :composeApp:convertXmlValueResourcesForCommonTest NO-SOURCE
+> Task :composeApp:copyNonXmlValueResourcesForCommonTest NO-SOURCE
+> Task :composeApp:prepareComposeResourcesTaskForCommonTest NO-SOURCE
+> Task :composeApp:generateResourceAccessorsForCommonTest NO-SOURCE
+> Task :composeApp:convertXmlValueResourcesForJvmTest NO-SOURCE
+> Task :composeApp:copyNonXmlValueResourcesForJvmTest NO-SOURCE
+> Task :composeApp:prepareComposeResourcesTaskForJvmTest NO-SOURCE
+> Task :composeApp:generateResourceAccessorsForJvmTest NO-SOURCE
+> Task :composeApp:generateActualResourceCollectorsForJvmMain
+> Task :composeApp:assembleJvmTestResources
+> Task :composeApp:jvmTestProcessResources
+> Task :composeApp:assembleJvmMainResources
+> Task :composeApp:processJvmTestResources SKIPPED
+> Task :androidApp:preBuild UP-TO-DATE
+> Task :androidApp:preDebugBuild UP-TO-DATE
+> Task :androidApp:mergeDebugNativeDebugMetadata NO-SOURCE
+> Task :composeApp:jvmProcessResources
+> Task :composeApp:processJvmMainResources SKIPPED
+> Task :androidApp:generateDebugResources
+> Task :androidApp:generateDebugBuildConfig
+> Task :composeApp:androidPreBuild UP-TO-DATE
+> Task :composeApp:preAndroidMainBuild UP-TO-DATE
+> Task :composeApp:generateAndroidMainEmptyResourceFiles
+> Task :core:androidPreBuild UP-TO-DATE
+> Task :core:preAndroidMainBuild UP-TO-DATE
+> Task :core:generateAndroidMainEmptyResourceFiles
+> Task :data:androidPreBuild UP-TO-DATE
+> Task :data:preAndroidMainBuild UP-TO-DATE
+> Task :data:generateAndroidMainEmptyResourceFiles
+> Task :androidApp:packageDebugResources
+> Task :composeApp:convertXmlValueResourcesForAndroidMain NO-SOURCE
+> Task :composeApp:copyNonXmlValueResourcesForAndroidMain NO-SOURCE
+> Task :composeApp:prepareComposeResourcesTaskForAndroidMain NO-SOURCE
+> Task :composeApp:generateResourceAccessorsForAndroidMain NO-SOURCE
+> Task :composeApp:generateActualResourceCollectorsForAndroidMain
+> Task :composeApp:copyAndroidMainComposeResourcesToAndroidAssets
+> Task :composeApp:packageAndroidMainResources
+> Task :composeApp:parseAndroidMainLocalResources
+> Task :composeApp:generateAndroidMainRFile
+> Task :data:generateCommonMainHouseOfVinoDatabaseInterface
+> Task :androidApp:javaPreCompileDebug
+> Task :androidApp:generateDebugAssets UP-TO-DATE
+> Task :composeApp:generateAndroidMainAssets UP-TO-DATE
+> Task :composeApp:mergeAndroidMainAssets
+> Task :androidApp:processDebugNavigationResources
+> Task :androidApp:mergeDebugAssets
+> Task :androidApp:parseDebugLocalResources
+> Task :androidApp:generateDebugRFile
+> Task :androidApp:compressDebugAssets
+> Task :androidApp:generateDebugGlobalSynthetics
+> Task :androidApp:desugarDebugFileDependencies
+> Task :composeApp:writeAndroidMainAarMetadata
+> Task :core:writeAndroidMainAarMetadata
+> Task :data:writeAndroidMainAarMetadata
+> Task :androidApp:checkDebugAarMetadata
+> Task :androidApp:mapDebugSourceSetPaths
+> Task :androidApp:checkDebugDuplicateClasses
+> Task :androidApp:compileDebugNavigationResources
+> Task :androidApp:mergeDebugResources
+> Task :androidApp:createDebugCompatibleScreenManifests
+> Task :androidApp:extractDeepLinksDebug
+> Task :composeApp:processAndroidMainManifest
+> Task :core:processAndroidMainManifest
+> Task :data:processAndroidMainManifest
+> Task :androidApp:processDebugMainManifest
+> Task :androidApp:processDebugManifest
+> Task :androidApp:processDebugManifestForPackage
+> Task :composeApp:mapAndroidMainSourceSetPaths
+> Task :composeApp:compileAndroidMainLibraryResources
+> Task :androidApp:processDebugResources
+> Task :androidApp:mergeDebugJniLibFolders
+> Task :composeApp:mergeAndroidMainJniLibFolders
+> Task :composeApp:mergeAndroidMainNativeLibs NO-SOURCE
+> Task :composeApp:copyAndroidMainJniLibsProjectOnly
+> Task :core:mergeAndroidMainJniLibFolders
+> Task :core:mergeAndroidMainNativeLibs NO-SOURCE
+> Task :core:copyAndroidMainJniLibsProjectOnly
+> Task :data:mergeAndroidMainJniLibFolders
+> Task :data:mergeAndroidMainNativeLibs NO-SOURCE
+> Task :data:copyAndroidMainJniLibsProjectOnly
+> Task :androidApp:mergeDebugNativeLibs
+> Task :core:compileKotlinJvm
+
+> Task :androidApp:stripDebugDebugSymbols
+Unable to strip the following libraries, packaging them as they are: libandroidx.graphics.path.so, libbarhopper_v3.so, libimage_processing_util_jni.so, libmlkit_google_ocr_pipeline.so, libsurface_util_jni.so. Run with --info option to learn more.
+
+> Task :core:compileAndroidMain
+> Task :androidApp:validateSigningDebug
+> Task :androidApp:writeDebugAppMetadata
+> Task :androidApp:writeDebugSigningConfigVersions
+> Task :androidApp:mergeExtDexDebug
+> Task :core:compileJvmMainJava NO-SOURCE
+> Task :core:jvmMainClasses
+> Task :core:processAndroidMainJavaRes
+> Task :core:jvmJar
+> Task :core:bundleLibRuntimeToDirAndroidMain
+> Task :core:bundleAndroidMainClassesToCompileJar
+
+> Task :core:compileTestKotlinJvm
+w: file:///home/runner/work/House-of-vino/House-of-vino/core/src/commonTest/kotlin/com/houseofvino/core/insights/InsightsTest.kt:40:52 Unnecessary non-null assertion (!!) on a non-null receiver of type 'CurrencyConverter.Result'.
+
+> Task :core:compileJvmTestJava NO-SOURCE
+> Task :core:jvmTestClasses
+> Task :data:compileKotlinJvm
+> Task :data:compileAndroidMain
+w: file:///home/runner/work/House-of-vino/House-of-vino/data/src/commonMain/kotlin/com/houseofvino/data/repo/LocationRepository.kt:38:57 Elvis operator (?:) always returns the left operand of non-nullable type 'Long'.
+w: file:///home/runner/work/House-of-vino/House-of-vino/data/src/commonMain/kotlin/com/houseofvino/data/search/SearchEngine.kt:192:48 Unnecessary non-null assertion (!!) on a non-null receiver of type 'String'.
+w: file:///home/runner/work/House-of-vino/House-of-vino/data/src/commonMain/kotlin/com/houseofvino/data/sync/Journal.kt:126:102 Elvis operator (?:) always returns the left operand of non-nullable type 'Long'.
+
+> Task :data:compileKotlinJvm
+w: file:///home/runner/work/House-of-vino/House-of-vino/data/src/commonMain/kotlin/com/houseofvino/data/repo/LocationRepository.kt:38:57 Elvis operator (?:) always returns the left operand of non-nullable type 'Long'.
+w: file:///home/runner/work/House-of-vino/House-of-vino/data/src/commonMain/kotlin/com/houseofvino/data/search/SearchEngine.kt:192:48 Unnecessary non-null assertion (!!) on a non-null receiver of type 'String'.
+w: file:///home/runner/work/House-of-vino/House-of-vino/data/src/commonMain/kotlin/com/houseofvino/data/sync/Journal.kt:126:102 Elvis operator (?:) always returns the left operand of non-nullable type 'Long'.
+
+> Task :data:compileJvmMainJava NO-SOURCE
+> Task :data:jvmMainClasses
+> Task :data:jvmJar
+> Task :data:bundleAndroidMainClassesToCompileJar
+> Task :core:jvmTest
+> Task :data:compileTestKotlinJvm
+> Task :data:compileJvmTestJava NO-SOURCE
+> Task :data:jvmTestClasses
+> Task :composeApp:compileKotlinJvm
+> Task :composeApp:compileAndroidMain
+> Task :data:jvmTest
+> Task :data:processAndroidMainJavaRes
+
+> Task :composeApp:compileKotlinJvm
+w: file:///home/runner/work/House-of-vino/House-of-vino/composeApp/src/commonMain/kotlin/com/houseofvino/app/ui/search/SearchScreen.kt:388:17 'fun rememberModalBottomSheetState(skipPartiallyExpanded: Boolean = ..., confirmValueChange: (SheetValue) -> Boolean = ...): SheetState' is deprecated. Use rememberBottomSheetState with Hidden initial value.
+
+> Task :data:bundleLibRuntimeToDirAndroidMain
+> Task :composeApp:compileJvmMainJava NO-SOURCE
+> Task :composeApp:jvmMainClasses
+> Task :composeApp:jvmJar
+
+> Task :composeApp:compileTestKotlinJvm
+w: file:///home/runner/work/House-of-vino/House-of-vino/composeApp/src/jvmTest/kotlin/com/houseofvino/app/CriticalFlowsTest.kt:61:61 'fun runComposeUiTest(effectContext: CoroutineContext = ..., runTestContext: CoroutineContext = ..., testTimeout: Duration = ..., block: suspend ComposeUiTest.() -> Unit): Unit' is deprecated. Use `androidx.compose.ui.test.v2.runComposeUiTest` instead. The v2 APIs use `StandardTestDispatcher` by default to better simulate production behavior where coroutines are queued rather than executed immediately.
+w: file:///home/runner/work/House-of-vino/House-of-vino/composeApp/src/jvmTest/kotlin/com/houseofvino/app/CriticalFlowsTest.kt:95:54 'fun runComposeUiTest(effectContext: CoroutineContext = ..., runTestContext: CoroutineContext = ..., testTimeout: Duration = ..., block: suspend ComposeUiTest.() -> Unit): Unit' is deprecated. Use `androidx.compose.ui.test.v2.runComposeUiTest` instead. The v2 APIs use `StandardTestDispatcher` by default to better simulate production behavior where coroutines are queued rather than executed immediately.
+w: file:///home/runner/work/House-of-vino/House-of-vino/composeApp/src/jvmTest/kotlin/com/houseofvino/app/CriticalFlowsTest.kt:119:45 'fun runComposeUiTest(effectContext: CoroutineContext = ..., runTestContext: CoroutineContext = ..., testTimeout: Duration = ..., block: suspend ComposeUiTest.() -> Unit): Unit' is deprecated. Use `androidx.compose.ui.test.v2.runComposeUiTest` instead. The v2 APIs use `StandardTestDispatcher` by default to better simulate production behavior where coroutines are queued rather than executed immediately.
+w: file:///home/runner/work/House-of-vino/House-of-vino/composeApp/src/jvmTest/kotlin/com/houseofvino/app/CriticalFlowsTest.kt:136:64 'fun runComposeUiTest(effectContext: CoroutineContext = ..., runTestContext: CoroutineContext = ..., testTimeout: Duration = ..., block: suspend ComposeUiTest.() -> Unit): Unit' is deprecated. Use `androidx.compose.ui.test.v2.runComposeUiTest` instead. The v2 APIs use `StandardTestDispatcher` by default to better simulate production behavior where coroutines are queued rather than executed immediately.
+w: file:///home/runner/work/House-of-vino/House-of-vino/composeApp/src/jvmTest/kotlin/com/houseofvino/app/SharingFlowTest.kt:54:47 'fun runComposeUiTest(effectContext: CoroutineContext = ..., runTestContext: CoroutineContext = ..., testTimeout: Duration = ..., block: suspend ComposeUiTest.() -> Unit): Unit' is deprecated. Use `androidx.compose.ui.test.v2.runComposeUiTest` instead. The v2 APIs use `StandardTestDispatcher` by default to better simulate production behavior where coroutines are queued rather than executed immediately.
+w: file:///home/runner/work/House-of-vino/House-of-vino/composeApp/src/jvmTest/kotlin/com/houseofvino/app/SharingFlowTest.kt:69:66 'fun runComposeUiTest(effectContext: CoroutineContext = ..., runTestContext: CoroutineContext = ..., testTimeout: Duration = ..., block: suspend ComposeUiTest.() -> Unit): Unit' is deprecated. Use `androidx.compose.ui.test.v2.runComposeUiTest` instead. The v2 APIs use `StandardTestDispatcher` by default to better simulate production behavior where coroutines are queued rather than executed immediately.
+
+> Task :composeApp:compileJvmTestJava NO-SOURCE
+> Task :composeApp:jvmTestClasses
+
+> Task :composeApp:compileAndroidMain
+w: file:///home/runner/work/House-of-vino/House-of-vino/composeApp/src/commonMain/kotlin/com/houseofvino/app/ui/search/SearchScreen.kt:388:17 'fun rememberModalBottomSheetState(skipPartiallyExpanded: Boolean = ..., confirmValueChange: (SheetValue) -> Boolean = ...): SheetState' is deprecated. Use rememberBottomSheetState with Hidden initial value.
+
+> Task :composeApp:processAndroidMainJavaRes
+> Task :composeApp:bundleAndroidMainClassesToCompileJar
+> Task :composeApp:bundleLibRuntimeToDirAndroidMain
+> Task :androidApp:compileDebugKotlin
+> Task :androidApp:processDebugJavaRes
+> Task :androidApp:compileDebugJavaWithJavac
+> Task :androidApp:dexBuilderDebug
+> Task :androidApp:mergeProjectDexDebug
+> Task :androidApp:mergeDebugJavaResource
+> Task :androidApp:mergeLibDexDebug
+> Task :androidApp:packageDebug
+> Task :androidApp:assembleDebug
+> Task :androidApp:createDebugApkListingFileRedirect
+> Task :composeApp:jvmTest
+gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/__run-1792264725303.json
+
+[Incubating] Problems report is available at: file:///home/runner/work/House-of-vino/House-of-vino/build/reports/problems/problems-report.html
+
+BUILD SUCCESSFUL in 3m 14s
+101 actionable tasks: 101 executed
+Configuration cache entry stored.
