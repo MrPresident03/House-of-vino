@@ -1,7 +1,7 @@
 # jvm-android: failure
 
-- commit: 846f277adee945b9c65aa405b09beab04d93204f
-- run: https://github.com/MrPresident03/House-of-vino/actions/runs/39059151426
+- commit: 929a69d587549719b7d5c1ca772a49fdfaf82822
+- run: https://github.com/MrPresident03/House-of-vino/actions/runs/39059492523
 - tests: 162 run, 1 failed, 0 skipped
 
 ## Gradle failures
@@ -20,8 +20,8 @@ Execution failed for task ':data:jvmTest'.
 
 ### com.houseofvino.data.SearchEngineTest.fiveThousandBottleCollectionStaysResponsive[jvm]
 ```
-java.lang.AssertionError: text search p100 1693 ms
-java.lang.AssertionError: text search p100 1693 ms
+java.lang.AssertionError: text search p100 1531 ms (load=5829ms text=[221, 91, 581, 1531, 313, 459, 164] sorted=[35, 48, 43, 98] filtered=373ms)
+java.lang.AssertionError: text search p100 1531 ms (load=5829ms text=[221, 91, 581, 1531, 313, 459, 164] sorted=[35, 48, 43, 98] filtered=373ms)
 	at org.junit.Assert.fail(Assert.java:89)
 	at kotlin.test.junit.JUnitAsserter.fail(JUnitSupport.kt:56)
 	at kotlin.test.Asserter.assertTrue(Assertions.kt:1545)
@@ -30,7 +30,7 @@ java.lang.AssertionError: text search p100 1693 ms
 	at kotlin.test.junit.JUnitAsserter.assertTrue(JUnitSupport.kt:30)
 	at kotlin.test.AssertionsKt__AssertionsKt.assertTrue(Assertions.kt:44)
 	at kotlin.test.AssertionsKt.assertTrue(Unknown Source)
-	at com.houseofvino.data.SearchEngineTest.fiveThousandBottleCollectionStaysResponsive(SearchEngineTest.kt:179)
+	at com.houseofvino.data.SearchEngineTest.fiveThousandBottleCollectionStaysResponsive(SearchEngineTest.kt:183)
 	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
 	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
 	at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:59)
