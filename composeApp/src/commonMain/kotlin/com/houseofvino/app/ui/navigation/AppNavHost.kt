@@ -171,8 +171,9 @@ fun AppNavHost(nav: NavHostController, start: Any, modifier: Modifier = Modifier
         composable<WishlistDetailRoute> { entry ->
             val id = entry.toRoute<WishlistDetailRoute>().itemId
             WishlistDetailScreen(id, onBack = back, onEdit = { nav.navigate(WishlistEditorRoute(itemId = id)) }, onAddToCellar = { item ->
+                val itemVintage = item.vintageId
                 when {
-                    item.vintageId != null -> nav.navigate(AddLotRoute(item.vintageId, wishlistItemId = item.id))
+                    itemVintage != null -> nav.navigate(AddLotRoute(itemVintage, wishlistItemId = item.id))
                     else -> {
                         val suggestion = WineSuggestion(
                             producer = item.producer?.let { Suggested(it, Confidence.HIGH, "wishlist") },

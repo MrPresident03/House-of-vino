@@ -31,12 +31,12 @@ kotlin {
             implementation(libs.kotlinx.serialization.json)
             implementation(libs.sqldelight.runtime)
             implementation(libs.sqldelight.coroutines)
-            implementation(project.dependencies.platform(libs.supabase.bom))
-            implementation(libs.supabase.auth)
-            implementation(libs.supabase.postgrest)
-            implementation(libs.supabase.storage)
-            implementation(libs.supabase.functions)
-            implementation(libs.ktor.client.core)
+            api(project.dependencies.platform(libs.supabase.bom))
+            api(libs.supabase.auth)
+            api(libs.supabase.postgrest)
+            api(libs.supabase.storage)
+            api(libs.supabase.functions)
+            api(libs.ktor.client.core)
         }
         androidMain.dependencies {
             implementation(libs.sqldelight.android.driver)

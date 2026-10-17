@@ -185,7 +185,8 @@ private fun DetailBody(
                     style = Hv.type.bodyDense, color = Hv.colors.inkMuted)
             }
             Box(Modifier.size(96.dp, 144.dp).clip(RoundedCornerShape(6.dp))) {
-                if (d.labelPhotoPath != null) PhotoImage(d.labelPhotoPath, "Label photo", Modifier.fillMaxSize())
+                val labelPath = d.labelPhotoPath
+                if (labelPath != null) PhotoImage(labelPath, "Label photo", Modifier.fillMaxSize())
                 else BottleSilhouette(w.color, Modifier.fillMaxSize())
             }
         }

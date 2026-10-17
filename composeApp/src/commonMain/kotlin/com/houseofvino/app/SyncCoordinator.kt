@@ -72,7 +72,7 @@ class SyncCoordinator(private val graph: AppGraph) {
             account.bootstrap(graph.collectionId, "My cellar")
             engine.sync(graph.collectionId)
             graph.photoStorage?.let { storage ->
-                graph.photos.syncFiles(storage, graph.platform::readPhoto) { id, bytes -> graph.platform.savePhoto(id, bytes) }
+                graph.photos.syncFiles(storage, readLocal = graph.platform::readPhoto, writeLocal = { id, bytes -> graph.platform.savePhoto(id, bytes) })
             }
             graph.settings.put(SettingsRepository.KEY_LAST_SYNC, graph.db.now().toString())
             _state.value = _state.value.copy(offline = false)

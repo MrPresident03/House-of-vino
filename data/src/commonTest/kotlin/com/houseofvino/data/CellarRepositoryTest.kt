@@ -80,7 +80,7 @@ class CellarRepositoryTest {
         val lot = app.cellar.stockLines(v).single().lotId
         app.cellar.transfer(lot, a, b, 2)
         val drink = app.cellar.depart(lot, b, 1, MovementKind.CONSUME, note = "Birthday")
-        assertEquals(mapOf(a to 4, b to 1), app.cellar.stockLines(v).associate { it.locationId to it.quantity })
+        assertEquals(mapOf<String?, Int>(a to 4, b to 1), app.cellar.stockLines(v).associate { it.locationId to it.quantity })
         assertFailsWith<LedgerError.InsufficientStock> { app.cellar.depart(lot, b, 2, MovementKind.CONSUME) }
         app.cellar.reverse(drink.id)
         assertFailsWith<LedgerError.AlreadyReversed> { app.cellar.reverse(drink.id) }
