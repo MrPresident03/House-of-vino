@@ -239,11 +239,12 @@ private fun PeerRow(p: PeerInfo, onRemove: () -> Unit) {
     Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
             Text(p.name, style = Hv.type.body, color = if (p.removed) Hv.colors.inkMuted else Hv.colors.ink)
+            val heard = p.lastHeardAt
             Text(
                 when {
                     p.removed -> "Removed"
-                    p.lastHeardAt == null -> "Hasn't sent a file yet"
-                    else -> "Last file received ${ago(graph.db.now() - p.lastHeardAt)}"
+                    heard == null -> "Hasn't sent a file yet"
+                    else -> "Last file received ${ago(graph.db.now() - heard)}"
                 },
                 style = Hv.type.caption, color = Hv.colors.inkMuted,
             )

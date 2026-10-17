@@ -52,7 +52,10 @@ import com.houseofvino.data.repo.ThemePreference
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 // =================================================================================================
 // More tab
@@ -268,7 +271,7 @@ fun EraseScreen(onBack: () -> Unit, onExport: () -> Unit, onErased: () -> Unit) 
             HvButton(if (busy) "Erasing…" else "Erase this phone", {
                 busy = true
                 scope.launch {
-                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { graph.wipeLocalData() }
+                    withContext(Dispatchers.IO) { graph.wipeLocalData() }
                     busy = false
                     onErased()
                 }
