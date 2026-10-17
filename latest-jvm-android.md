@@ -1,99 +1,124 @@
 # jvm-android: failure
 
-- commit: 383f203d522f1f8870c8322dfc9147ac60348f77
-- run: https://github.com/MrPresident03/House-of-vino/actions/runs/39013903895
-- tests: 78 run, 0 failed, 0 skipped
+- commit: ad7107afe589359335cc7f375bf95646f6478cf6
+- run: https://github.com/MrPresident03/House-of-vino/actions/runs/39014063512
+- tests: 120 run, 3 failed, 0 skipped
 
-## Compiler errors (59)
+## Compiler errors (2)
 ```
-e: file:///home/runner/work/House-of-vino/House-of-vino/data/src/commonTest/kotlin/com/houseofvino/data/CellarRepositoryTest.kt:83:9 Type inference failed. The value of the type parameter 'T' must be mentioned in input types (argument types, receiver type, or expected type). Try to specify it explicitly.
-e: file:///home/runner/work/House-of-vino/House-of-vino/composeApp/src/commonMain/kotlin/com/houseofvino/app/AppGraph.kt:28:8 Unresolved reference 'io'.
-e: file:///home/runner/work/House-of-vino/House-of-vino/composeApp/src/commonMain/kotlin/com/houseofvino/app/AppGraph.kt:43:20 Unresolved reference 'SupabaseClient'.
-e: file:///home/runner/work/House-of-vino/House-of-vino/composeApp/src/commonMain/kotlin/com/houseofvino/app/AppGraph.kt:43:84 Cannot access class 'io.github.jan.supabase.SupabaseClient'. Check your module classpath for missing or conflicting dependencies.
-e: file:///home/runner/work/House-of-vino/House-of-vino/composeApp/src/commonMain/kotlin/com/houseofvino/app/AppGraph.kt:43:90 Cannot access class 'io.github.jan.supabase.SupabaseClient'. Check your module classpath for missing or conflicting dependencies.
-e: file:///home/runner/work/House-of-vino/House-of-vino/composeApp/src/commonMain/kotlin/com/houseofvino/app/AppGraph.kt:62:18 Unresolved reference 'SupabaseClient'.
-e: file:///home/runner/work/House-of-vino/House-of-vino/composeApp/src/commonMain/kotlin/com/houseofvino/app/AppGraph.kt:63:45 Cannot infer type for type parameter 'T'. Specify it explicitly.
-e: file:///home/runner/work/House-of-vino/House-of-vino/composeApp/src/commonMain/kotlin/com/houseofvino/app/AppGraph.kt:63:45 Cannot infer type for type parameter 'R'. Specify it explicitly.
-e: file:///home/runner/work/House-of-vino/House-of-vino/composeApp/src/commonMain/kotlin/com/houseofvino/app/AppGraph.kt:63:45 Candidate 'fun <T, R> T.let(block: (T) -> R): R' is inapplicable because of a receiver type mismatch.
-e: file:///home/runner/work/House-of-vino/House-of-vino/composeApp/src/commonMain/kotlin/com/houseofvino/app/AppGraph.kt:63:49 Cannot infer type for type parameter 'T'. Specify it explicitly.
-e: file:///home/runner/work/House-of-vino/House-of-vino/composeApp/src/commonMain/kotlin/com/houseofvino/app/AppGraph.kt:63:51 Cannot access class 'io.github.jan.supabase.SupabaseClient'. Check your module classpath for missing or conflicting dependencies.
-e: file:///home/runner/work/House-of-vino/House-of-vino/composeApp/src/commonMain/kotlin/com/houseofvino/app/AppGraph.kt:64:48 Cannot infer type for type parameter 'T'. Specify it explicitly.
-e: file:///home/runner/work/House-of-vino/House-of-vino/composeApp/src/commonMain/kotlin/com/houseofvino/app/AppGraph.kt:64:48 Cannot infer type for type parameter 'R'. Specify it explicitly.
-e: file:///home/runner/work/House-of-vino/House-of-vino/composeApp/src/commonMain/kotlin/com/houseofvino/app/AppGraph.kt:64:48 Candidate 'fun <T, R> T.let(block: (T) -> R): R' is inapplicable because of a receiver type mismatch.
-e: file:///home/runner/work/House-of-vino/House-of-vino/composeApp/src/commonMain/kotlin/com/houseofvino/app/AppGraph.kt:64:52 Cannot infer type for type parameter 'T'. Specify it explicitly.
-e: file:///home/runner/work/House-of-vino/House-of-vino/composeApp/src/commonMain/kotlin/com/houseofvino/app/AppGraph.kt:64:54 Cannot access class 'io.github.jan.supabase.SupabaseClient'. Check your module classpath for missing or conflicting dependencies.
-e: file:///home/runner/work/House-of-vino/House-of-vino/composeApp/src/commonMain/kotlin/com/houseofvino/app/AppGraph.kt:65:44 Cannot infer type for type parameter 'T'. Specify it explicitly.
-e: file:///home/runner/work/House-of-vino/House-of-vino/composeApp/src/commonMain/kotlin/com/houseofvino/app/AppGraph.kt:65:44 Cannot infer type for type parameter 'R'. Specify it explicitly.
-e: file:///home/runner/work/House-of-vino/House-of-vino/composeApp/src/commonMain/kotlin/com/houseofvino/app/AppGraph.kt:65:44 Candidate 'fun <T, R> T.let(block: (T) -> R): R' is inapplicable because of a receiver type mismatch.
-e: file:///home/runner/work/House-of-vino/House-of-vino/composeApp/src/commonMain/kotlin/com/houseofvino/app/AppGraph.kt:65:48 Cannot infer type for type parameter 'T'. Specify it explicitly.
-e: file:///home/runner/work/House-of-vino/House-of-vino/composeApp/src/commonMain/kotlin/com/houseofvino/app/AppGraph.kt:65:65 Cannot access class 'io.github.jan.supabase.SupabaseClient'. Check your module classpath for missing or conflicting dependencies.
-e: file:///home/runner/work/House-of-vino/House-of-vino/composeApp/src/commonMain/kotlin/com/houseofvino/app/SyncCoordinator.kt:72:21 Cannot access class 'io.github.jan.supabase.postgrest.result.PostgrestResult'. Check your module classpath for missing or conflicting dependencies.
-e: file:///home/runner/work/House-of-vino/House-of-vino/composeApp/src/commonMain/kotlin/com/houseofvino/app/SyncCoordinator.kt:75:30 No value passed for parameter 'writeLocal'.
-e: file:///home/runner/work/House-of-vino/House-of-vino/composeApp/src/commonMain/kotlin/com/houseofvino/app/SyncCoordinator.kt:75:76 Argument type mismatch: actual type is '(??? (Unknown lambda parameter type), ??? (Unknown lambda parameter type)) -> ??? (Unknown lambda return type)', but 'Long' was expected.
-e: file:///home/runner/work/House-of-vino/House-of-vino/composeApp/src/commonMain/kotlin/com/houseofvino/app/SyncCoordinator.kt:75:78 Cannot infer type for value parameter 'id'. Specify it explicitly.
-e: file:///home/runner/work/House-of-vino/House-of-vino/composeApp/src/commonMain/kotlin/com/houseofvino/app/SyncCoordinator.kt:75:82 Cannot infer type for value parameter 'bytes'. Specify it explicitly.
-e: file:///home/runner/work/House-of-vino/House-of-vino/composeApp/src/commonMain/kotlin/com/houseofvino/app/ui/cellar/VintageDetailScreen.kt:188:58 Smart cast to 'String' is impossible, because 'labelPhotoPath' is a public API property declared in different module.
-e: file:///home/runner/work/House-of-vino/House-of-vino/composeApp/src/commonMain/kotlin/com/houseofvino/app/ui/navigation/AppNavHost.kt:175:72 Smart cast to 'String' is impossible, because 'vintageId' is a public API property declared in different module.
-e: file:///home/runner/work/House-of-vino/House-of-vino/composeApp/src/commonMain/kotlin/com/houseofvino/app/ui/settings/SettingsScreens.kt:172:42 Cannot access class 'io.github.jan.supabase.auth.user.UserInfo'. Check your module classpath for missing or conflicting dependencies.
-e: file:///home/runner/work/House-of-vino/House-of-vino/composeApp/src/commonMain/kotlin/com/houseofvino/app/ui/settings/SettingsScreens.kt:174:46 Cannot access class 'io.github.jan.supabase.auth.OtpVerifyResult'. Check your module classpath for missing or conflicting dependencies.
-e: file:///home/runner/work/House-of-vino/House-of-vino/composeApp/src/commonMain/kotlin/com/houseofvino/app/AppGraph.kt:28:8 Unresolved reference 'io'.
-e: file:///home/runner/work/House-of-vino/House-of-vino/composeApp/src/commonMain/kotlin/com/houseofvino/app/AppGraph.kt:43:20 Unresolved reference 'SupabaseClient'.
-e: file:///home/runner/work/House-of-vino/House-of-vino/composeApp/src/commonMain/kotlin/com/houseofvino/app/AppGraph.kt:43:84 Cannot access class 'io.github.jan.supabase.SupabaseClient'. Check your module classpath for missing or conflicting dependencies.
-e: file:///home/runner/work/House-of-vino/House-of-vino/composeApp/src/commonMain/kotlin/com/houseofvino/app/AppGraph.kt:43:90 Cannot access class 'io.github.jan.supabase.SupabaseClient'. Check your module classpath for missing or conflicting dependencies.
-e: file:///home/runner/work/House-of-vino/House-of-vino/composeApp/src/commonMain/kotlin/com/houseofvino/app/AppGraph.kt:62:18 Unresolved reference 'SupabaseClient'.
-e: file:///home/runner/work/House-of-vino/House-of-vino/composeApp/src/commonMain/kotlin/com/houseofvino/app/AppGraph.kt:63:45 Cannot infer type for type parameter 'T'. Specify it explicitly.
-e: file:///home/runner/work/House-of-vino/House-of-vino/composeApp/src/commonMain/kotlin/com/houseofvino/app/AppGraph.kt:63:45 Cannot infer type for type parameter 'R'. Specify it explicitly.
-e: file:///home/runner/work/House-of-vino/House-of-vino/composeApp/src/commonMain/kotlin/com/houseofvino/app/AppGraph.kt:63:45 Candidate 'fun <T, R> T.let(block: (T) -> R): R' is inapplicable because of a receiver type mismatch.
-e: file:///home/runner/work/House-of-vino/House-of-vino/composeApp/src/commonMain/kotlin/com/houseofvino/app/AppGraph.kt:63:49 Cannot infer type for type parameter 'T'. Specify it explicitly.
-e: file:///home/runner/work/House-of-vino/House-of-vino/composeApp/src/commonMain/kotlin/com/houseofvino/app/AppGraph.kt:63:51 Cannot access class 'io.github.jan.supabase.SupabaseClient'. Check your module classpath for missing or conflicting dependencies.
-e: file:///home/runner/work/House-of-vino/House-of-vino/composeApp/src/commonMain/kotlin/com/houseofvino/app/AppGraph.kt:64:48 Cannot infer type for type parameter 'T'. Specify it explicitly.
-e: file:///home/runner/work/House-of-vino/House-of-vino/composeApp/src/commonMain/kotlin/com/houseofvino/app/AppGraph.kt:64:48 Cannot infer type for type parameter 'R'. Specify it explicitly.
-e: file:///home/runner/work/House-of-vino/House-of-vino/composeApp/src/commonMain/kotlin/com/houseofvino/app/AppGraph.kt:64:48 Candidate 'fun <T, R> T.let(block: (T) -> R): R' is inapplicable because of a receiver type mismatch.
-e: file:///home/runner/work/House-of-vino/House-of-vino/composeApp/src/commonMain/kotlin/com/houseofvino/app/AppGraph.kt:64:52 Cannot infer type for type parameter 'T'. Specify it explicitly.
-e: file:///home/runner/work/House-of-vino/House-of-vino/composeApp/src/commonMain/kotlin/com/houseofvino/app/AppGraph.kt:64:54 Cannot access class 'io.github.jan.supabase.SupabaseClient'. Check your module classpath for missing or conflicting dependencies.
-e: file:///home/runner/work/House-of-vino/House-of-vino/composeApp/src/commonMain/kotlin/com/houseofvino/app/AppGraph.kt:65:44 Cannot infer type for type parameter 'T'. Specify it explicitly.
-e: file:///home/runner/work/House-of-vino/House-of-vino/composeApp/src/commonMain/kotlin/com/houseofvino/app/AppGraph.kt:65:44 Cannot infer type for type parameter 'R'. Specify it explicitly.
-e: file:///home/runner/work/House-of-vino/House-of-vino/composeApp/src/commonMain/kotlin/com/houseofvino/app/AppGraph.kt:65:44 Candidate 'fun <T, R> T.let(block: (T) -> R): R' is inapplicable because of a receiver type mismatch.
-e: file:///home/runner/work/House-of-vino/House-of-vino/composeApp/src/commonMain/kotlin/com/houseofvino/app/AppGraph.kt:65:48 Cannot infer type for type parameter 'T'. Specify it explicitly.
-e: file:///home/runner/work/House-of-vino/House-of-vino/composeApp/src/commonMain/kotlin/com/houseofvino/app/AppGraph.kt:65:65 Cannot access class 'io.github.jan.supabase.SupabaseClient'. Check your module classpath for missing or conflicting dependencies.
-e: file:///home/runner/work/House-of-vino/House-of-vino/composeApp/src/commonMain/kotlin/com/houseofvino/app/SyncCoordinator.kt:72:21 Cannot access class 'io.github.jan.supabase.postgrest.result.PostgrestResult'. Check your module classpath for missing or conflicting dependencies.
-e: file:///home/runner/work/House-of-vino/House-of-vino/composeApp/src/commonMain/kotlin/com/houseofvino/app/SyncCoordinator.kt:75:30 No value passed for parameter 'writeLocal'.
-e: file:///home/runner/work/House-of-vino/House-of-vino/composeApp/src/commonMain/kotlin/com/houseofvino/app/SyncCoordinator.kt:75:76 Argument type mismatch: actual type is '(??? (Unknown lambda parameter type), ??? (Unknown lambda parameter type)) -> ??? (Unknown lambda return type)', but 'Long' was expected.
-e: file:///home/runner/work/House-of-vino/House-of-vino/composeApp/src/commonMain/kotlin/com/houseofvino/app/SyncCoordinator.kt:75:78 Cannot infer type for value parameter 'id'. Specify it explicitly.
-e: file:///home/runner/work/House-of-vino/House-of-vino/composeApp/src/commonMain/kotlin/com/houseofvino/app/SyncCoordinator.kt:75:82 Cannot infer type for value parameter 'bytes'. Specify it explicitly.
-e: file:///home/runner/work/House-of-vino/House-of-vino/composeApp/src/commonMain/kotlin/com/houseofvino/app/ui/cellar/VintageDetailScreen.kt:188:58 Smart cast to 'String' is impossible, because 'labelPhotoPath' is a public API property declared in different module.
-e: file:///home/runner/work/House-of-vino/House-of-vino/composeApp/src/commonMain/kotlin/com/houseofvino/app/ui/navigation/AppNavHost.kt:175:72 Smart cast to 'String' is impossible, because 'vintageId' is a public API property declared in different module.
-e: file:///home/runner/work/House-of-vino/House-of-vino/composeApp/src/commonMain/kotlin/com/houseofvino/app/ui/settings/SettingsScreens.kt:172:42 Cannot access class 'io.github.jan.supabase.auth.user.UserInfo'. Check your module classpath for missing or conflicting dependencies.
-e: file:///home/runner/work/House-of-vino/House-of-vino/composeApp/src/commonMain/kotlin/com/houseofvino/app/ui/settings/SettingsScreens.kt:174:46 Cannot access class 'io.github.jan.supabase.auth.OtpVerifyResult'. Check your module classpath for missing or conflicting dependencies.
+e: file:///home/runner/work/House-of-vino/House-of-vino/composeApp/src/jvmTest/kotlin/com/houseofvino/app/CriticalFlowsTest.kt:38:19 Argument type mismatch: actual type is 'Long', but 'String?' was expected.
+e: file:///home/runner/work/House-of-vino/House-of-vino/composeApp/src/jvmTest/kotlin/com/houseofvino/app/CriticalFlowsTest.kt:77:19 Argument type mismatch: actual type is 'Long', but 'String?' was expected.
 ```
 
 ## Gradle failures
 ```
 * What went wrong:
-Execution failed for task ':data:compileTestKotlinJvm' (registered in build file 'data/build.gradle.kts').
-> A failure occurred while executing org.jetbrains.kotlin.compilerRunner.btapi.BuildToolsApiCompilationWork
-   > Kotlin compiler: TYPE_INFERENCE_ONLY_INPUT_TYPES_ERROR
-       Kotlin compiler error
-         Type inference failed. The value of the type parameter 'T' must be mentioned in input types (argument types, receiver type, or expected type). Try to specify it explicitly.
-         Location: /home/runner/work/House-of-vino/House-of-vino/data/src/commonTest/kotlin/com/houseofvino/data/CellarRepositoryTest.kt line 83
+Execution failed for task ':data:jvmTest'.
+> There were failing tests. See the report at: file:///home/runner/work/House-of-vino/House-of-vino/data/build/reports/tests/jvmTest/index.html
 
+* Try:
+> Run with --scan to get full insights from a Build Scan (powered by Develocity).
+
+* Exception is:
 ---
 * What went wrong:
-Execution failed for task ':composeApp:compileKotlinJvm' (registered in build file 'composeApp/build.gradle.kts').
+Execution failed for task ':composeApp:compileTestKotlinJvm' (registered in build file 'composeApp/build.gradle.kts').
 > A failure occurred while executing org.jetbrains.kotlin.compilerRunner.btapi.BuildToolsApiCompilationWork
-   > Kotlin compiler: UNRESOLVED_IMPORT
+   > Kotlin compiler: ARGUMENT_TYPE_MISMATCH
        Kotlin compiler error
-         Unresolved reference 'io'.
-         Location: /home/runner/work/House-of-vino/House-of-vino/composeApp/src/commonMain/kotlin/com/houseofvino/app/AppGraph.kt line 28
-
----
-* What went wrong:
-Execution failed for task ':composeApp:compileAndroidMain' (registered by plugin 'com.android.internal.kotlin.multiplatform.library').
-> A failure occurred while executing org.jetbrains.kotlin.compilerRunner.btapi.BuildToolsApiCompilationWork
-   > Kotlin compiler: UNRESOLVED_IMPORT
-       Kotlin compiler error
-         Unresolved reference 'io'.
-         Location: /home/runner/work/House-of-vino/House-of-vino/composeApp/src/commonMain/kotlin/com/houseofvino/app/AppGraph.kt line 28
+         Argument type mismatch: actual type is 'Long', but 'String?' was expected.
+         Location: /home/runner/work/House-of-vino/House-of-vino/composeApp/src/jvmTest/kotlin/com/houseofvino/app/CriticalFlowsTest.kt line 38
 
 ```
 
+## Failed tests (3)
+
+### com.houseofvino.data.SearchEngineTest.indexFollowsEditsAndDeletes[jvm]
+```
+org.sqlite.SQLiteException: [SQLITE_CORRUPT_VTAB] Content in the virtual table is corrupt (database disk image is malformed)
+org.sqlite.SQLiteException: [SQLITE_CORRUPT_VTAB] Content in the virtual table is corrupt (database disk image is malformed)
+	at org.sqlite.core.DB.newSQLException(DB.java:1182)
+	at org.sqlite.core.DB.newSQLException(DB.java:1193)
+	at org.sqlite.core.DB.execute(DB.java:991)
+	at org.sqlite.jdbc3.JDBC3PreparedStatement.lambda$executeQuery$1(JDBC3PreparedStatement.java:93)
+	at org.sqlite.jdbc3.JDBC3Statement.withConnectionTimeout(JDBC3Statement.java:464)
+	at org.sqlite.jdbc3.JDBC3PreparedStatement.executeQuery(JDBC3PreparedStatement.java:88)
+	at app.cash.sqldelight.driver.jdbc.JdbcPreparedStatement.executeQuery(JdbcDriver.kt:288)
+	at app.cash.sqldelight.driver.jdbc.JdbcDriver.executeQuery(JdbcDriver.kt:161)
+	at com.houseofvino.data.search.SearchEngine.vocabularyNear(SearchEngine.kt:119)
+	at com.houseofvino.data.search.SearchEngine.runWithTypoFallback(SearchEngine.kt:101)
+	at com.houseofvino.data.search.SearchEngine.searchCellar(SearchEngine.kt:83)
+	at com.houseofvino.data.SearchEngineTest.cellar(SearchEngineTest.kt:46)
+	at com.houseofvino.data.SearchEngineTest.cellar$default(SearchEngineTest.kt:45)
+	at com.houseofvino.data.SearchEngineTest.indexFollowsEditsAndDeletes(SearchEngineTest.kt:140)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:59)
+	at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)
+	at org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:56)
+	at org.junit.internal.runners.statements.InvokeMethod.evaluate(InvokeMethod.java:17)
+	at org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)
+	at org.junit.runners.BlockJUnit4ClassRunner$1.evaluate(BlockJUnit4ClassRunner.java:100)
+	at org.junit.runners.ParentRunner.runLeaf(ParentRunner.java:366)
+	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:103)
+```
+
+### com.houseofvino.data.SearchEngineTest.matchesAccentInsensitivePrefixesAcrossFields[jvm]
+```
+org.sqlite.SQLiteException: [SQLITE_CORRUPT_VTAB] Content in the virtual table is corrupt (database disk image is malformed)
+org.sqlite.SQLiteException: [SQLITE_CORRUPT_VTAB] Content in the virtual table is corrupt (database disk image is malformed)
+	at org.sqlite.core.DB.newSQLException(DB.java:1182)
+	at org.sqlite.core.DB.newSQLException(DB.java:1193)
+	at org.sqlite.core.DB.execute(DB.java:991)
+	at org.sqlite.jdbc3.JDBC3PreparedStatement.lambda$executeQuery$1(JDBC3PreparedStatement.java:93)
+	at org.sqlite.jdbc3.JDBC3Statement.withConnectionTimeout(JDBC3Statement.java:464)
+	at org.sqlite.jdbc3.JDBC3PreparedStatement.executeQuery(JDBC3PreparedStatement.java:88)
+	at app.cash.sqldelight.driver.jdbc.JdbcPreparedStatement.executeQuery(JdbcDriver.kt:288)
+	at app.cash.sqldelight.driver.jdbc.JdbcDriver.executeQuery(JdbcDriver.kt:161)
+	at com.houseofvino.data.search.SearchEngine.vocabularyNear(SearchEngine.kt:119)
+	at com.houseofvino.data.search.SearchEngine.runWithTypoFallback(SearchEngine.kt:101)
+	at com.houseofvino.data.search.SearchEngine.searchCellar(SearchEngine.kt:83)
+	at com.houseofvino.data.SearchEngineTest.cellar(SearchEngineTest.kt:46)
+	at com.houseofvino.data.SearchEngineTest.cellar$default(SearchEngineTest.kt:45)
+	at com.houseofvino.data.SearchEngineTest.matchesAccentInsensitivePrefixesAcrossFields(SearchEngineTest.kt:61)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:59)
+	at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)
+	at org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:56)
+	at org.junit.internal.runners.statements.InvokeMethod.evaluate(InvokeMethod.java:17)
+	at org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)
+	at org.junit.runners.BlockJUnit4ClassRunner$1.evaluate(BlockJUnit4ClassRunner.java:100)
+	at org.junit.runners.ParentRunner.runLeaf(ParentRunner.java:366)
+	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:103)
+```
+
+### com.houseofvino.data.SearchEngineTest.correctsTyposWhenNothingMatches[jvm]
+```
+org.sqlite.SQLiteException: [SQLITE_CORRUPT_VTAB] Content in the virtual table is corrupt (database disk image is malformed)
+org.sqlite.SQLiteException: [SQLITE_CORRUPT_VTAB] Content in the virtual table is corrupt (database disk image is malformed)
+	at org.sqlite.core.DB.newSQLException(DB.java:1182)
+	at org.sqlite.core.DB.newSQLException(DB.java:1193)
+	at org.sqlite.core.DB.execute(DB.java:991)
+	at org.sqlite.jdbc3.JDBC3PreparedStatement.lambda$executeQuery$1(JDBC3PreparedStatement.java:93)
+	at org.sqlite.jdbc3.JDBC3Statement.withConnectionTimeout(JDBC3Statement.java:464)
+	at org.sqlite.jdbc3.JDBC3PreparedStatement.executeQuery(JDBC3PreparedStatement.java:88)
+	at app.cash.sqldelight.driver.jdbc.JdbcPreparedStatement.executeQuery(JdbcDriver.kt:288)
+	at app.cash.sqldelight.driver.jdbc.JdbcDriver.executeQuery(JdbcDriver.kt:161)
+	at com.houseofvino.data.search.SearchEngine.vocabularyNear(SearchEngine.kt:119)
+	at com.houseofvino.data.search.SearchEngine.runWithTypoFallback(SearchEngine.kt:101)
+	at com.houseofvino.data.search.SearchEngine.searchCellar(SearchEngine.kt:83)
+	at com.houseofvino.data.SearchEngineTest.cellar(SearchEngineTest.kt:46)
+	at com.houseofvino.data.SearchEngineTest.cellar$default(SearchEngineTest.kt:45)
+	at com.houseofvino.data.SearchEngineTest.correctsTyposWhenNothingMatches(SearchEngineTest.kt:68)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:59)
+	at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)
+	at org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:56)
+	at org.junit.internal.runners.statements.InvokeMethod.evaluate(InvokeMethod.java:17)
+	at org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)
+	at org.junit.runners.BlockJUnit4ClassRunner$1.evaluate(BlockJUnit4ClassRunner.java:100)
+	at org.junit.runners.ParentRunner.runLeaf(ParentRunner.java:366)
+	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:103)
+```
