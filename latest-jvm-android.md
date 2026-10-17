@@ -1,42 +1,61 @@
 # jvm-android: failure
 
-- commit: 6fca708ec4646372a5f96a013a1cb5af8e92c4a4
-- run: https://github.com/MrPresident03/House-of-vino/actions/runs/39058791180
-- tests: 151 run, 0 failed, 0 skipped
-
-## Compiler errors (2)
-```
-e: file:///home/runner/work/House-of-vino/House-of-vino/composeApp/src/commonMain/kotlin/com/houseofvino/app/ui/sharing/SharingScreens.kt:246:72 Smart cast to 'Long' is impossible, because 'lastHeardAt' is a public API property declared in different module.
-e: file:///home/runner/work/House-of-vino/House-of-vino/composeApp/src/commonMain/kotlin/com/houseofvino/app/ui/sharing/SharingScreens.kt:246:72 Smart cast to 'Long' is impossible, because 'lastHeardAt' is a public API property declared in different module.
-```
+- commit: 846f277adee945b9c65aa405b09beab04d93204f
+- run: https://github.com/MrPresident03/House-of-vino/actions/runs/39059151426
+- tests: 162 run, 1 failed, 0 skipped
 
 ## Gradle failures
 ```
 * What went wrong:
-Execution failed for task ':composeApp:compileKotlinJvm' (registered in build file 'composeApp/build.gradle.kts').
-> A failure occurred while executing org.jetbrains.kotlin.compilerRunner.btapi.BuildToolsApiCompilationWork
-   > Kotlin compiler: SMARTCAST_IMPOSSIBLE
-       Kotlin compiler error
-         Smart cast to 'Long' is impossible, because 'lastHeardAt' is a public API property declared in different module.
-         Location: /home/runner/work/House-of-vino/House-of-vino/composeApp/src/commonMain/kotlin/com/houseofvino/app/ui/sharing/SharingScreens.kt line 246
+Execution failed for task ':data:jvmTest'.
+> There were failing tests. See the report at: file:///home/runner/work/House-of-vino/House-of-vino/data/build/reports/tests/jvmTest/index.html
 
----
-* What went wrong:
-Execution failed for task ':composeApp:compileAndroidMain' (registered by plugin 'com.android.internal.kotlin.multiplatform.library').
-> A failure occurred while executing org.jetbrains.kotlin.compilerRunner.btapi.BuildToolsApiCompilationWork
-   > Kotlin compiler: SMARTCAST_IMPOSSIBLE
-       Kotlin compiler error
-         Smart cast to 'Long' is impossible, because 'lastHeardAt' is a public API property declared in different module.
-         Location: /home/runner/work/House-of-vino/House-of-vino/composeApp/src/commonMain/kotlin/com/houseofvino/app/ui/sharing/SharingScreens.kt line 246
+* Try:
+> Run with --scan to get full insights from a Build Scan (powered by Develocity).
 
+* Exception is:
+```
+
+## Failed tests (1)
+
+### com.houseofvino.data.SearchEngineTest.fiveThousandBottleCollectionStaysResponsive[jvm]
+```
+java.lang.AssertionError: text search p100 1693 ms
+java.lang.AssertionError: text search p100 1693 ms
+	at org.junit.Assert.fail(Assert.java:89)
+	at kotlin.test.junit.JUnitAsserter.fail(JUnitSupport.kt:56)
+	at kotlin.test.Asserter.assertTrue(Assertions.kt:1545)
+	at kotlin.test.junit.JUnitAsserter.assertTrue(JUnitSupport.kt:30)
+	at kotlin.test.Asserter.assertTrue(Assertions.kt:1555)
+	at kotlin.test.junit.JUnitAsserter.assertTrue(JUnitSupport.kt:30)
+	at kotlin.test.AssertionsKt__AssertionsKt.assertTrue(Assertions.kt:44)
+	at kotlin.test.AssertionsKt.assertTrue(Unknown Source)
+	at com.houseofvino.data.SearchEngineTest.fiveThousandBottleCollectionStaysResponsive(SearchEngineTest.kt:179)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:59)
+	at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)
+	at org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:56)
+	at org.junit.internal.runners.statements.InvokeMethod.evaluate(InvokeMethod.java:17)
+	at org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)
+	at org.junit.runners.BlockJUnit4ClassRunner$1.evaluate(BlockJUnit4ClassRunner.java:100)
+	at org.junit.runners.ParentRunner.runLeaf(ParentRunner.java:366)
+	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:103)
+	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:63)
+	at org.junit.runners.ParentRunner$4.run(ParentRunner.java:331)
+	at org.junit.runners.ParentRunner$1.schedule(ParentRunner.java:79)
+	at org.junit.runners.ParentRunner.runChildren(ParentRunner.java:329)
+	at org.junit.runners.ParentRunner.access$100(ParentRunner.java:66)
 ```
 
 ## Tests per class
 - Base64Test: 4
 - CandidateMatcherTest: 4
 - CellarRepositoryTest: 8
+- CriticalFlowsTest: 4
 - CryptoTest: 10
 - CsvTest: 4
+- DesignTokensTest: 5
 - DuplicateDetectorTest: 2
 - ExchangeRateTest: 7
 - FieldMergeTest: 7
@@ -56,4 +75,5 @@ Execution failed for task ':composeApp:compileAndroidMain' (registered by plugin
 - QueryParserTest: 3
 - SchemaTest: 5
 - SearchEngineTest: 8
+- SharingFlowTest: 2
 - TextNormalizerTest: 2
