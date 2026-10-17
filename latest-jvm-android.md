@@ -1,7 +1,7 @@
 # jvm-android: success
 
-- commit: 360834d2191270b4a77a86e713ceddb5d43af22c
-- run: https://github.com/MrPresident03/House-of-vino/actions/runs/39060748184
+- commit: eb247ba6360d464af7a7918858e57105e86b245e
+- run: https://github.com/MrPresident03/House-of-vino/actions/runs/39061884217
 - tests: 162 run, 0 failed, 0 skipped
 
 ## Tests per class
