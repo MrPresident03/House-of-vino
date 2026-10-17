@@ -1,0 +1,333 @@
+NOTICE:  database "hov_test_2708" does not exist, skipping
+applying migrations/20261017000000_initial_schema.sql
+applying migrations/20261017000100_rpc_functions.sql
+ become 
+--------
+ 
+(1 row)
+
+ bootstrap_collection 
+----------------------
+ 
+(1 row)
+
+ bootstrap_collection 
+----------------------
+ 
+(1 row)
+
+psql:tests/10_security_and_sync.sql:74: NOTICE:  ok: alice sees her collection
+ eq 
+----
+ 
+(1 row)
+
+psql:tests/10_security_and_sync.sql:75: NOTICE:  ok: alice is owner
+ eq 
+----
+ 
+(1 row)
+
+psql:tests/10_security_and_sync.sql:87: NOTICE:  ok: four ops applied
+ eq 
+----
+ 
+(1 row)
+
+psql:tests/10_security_and_sync.sql:88: NOTICE:  ok: revs increase in order
+ eq 
+----
+ 
+(1 row)
+
+psql:tests/10_security_and_sync.sql:89: NOTICE:  ok: dates round-trip
+ eq 
+----
+ 
+(1 row)
+
+psql:tests/10_security_and_sync.sql:98: NOTICE:  ok: replayed op returns the original result
+ eq 
+----
+ 
+(1 row)
+
+psql:tests/10_security_and_sync.sql:99: NOTICE:  ok: no duplicate movement
+ eq 
+----
+ 
+(1 row)
+
+psql:tests/10_security_and_sync.sql:107: NOTICE:  ok: update with current base applies
+ eq 
+----
+ 
+(1 row)
+
+psql:tests/10_security_and_sync.sql:112: NOTICE:  ok: stale base is a conflict
+ eq 
+----
+ 
+(1 row)
+
+psql:tests/10_security_and_sync.sql:113: NOTICE:  ok: conflict returns server row
+ eq 
+----
+ 
+(1 row)
+
+psql:tests/10_security_and_sync.sql:116: NOTICE:  ok: movement update refused (42501: permission denied for table movement)
+ fails 
+-------
+ 
+(1 row)
+
+psql:tests/10_security_and_sync.sql:117: NOTICE:  ok: movement delete refused (42501: permission denied for table movement)
+ fails 
+-------
+ 
+(1 row)
+
+psql:tests/10_security_and_sync.sql:118: NOTICE:  ok: ledger unchanged
+ eq 
+----
+ 
+(1 row)
+
+psql:tests/10_security_and_sync.sql:119: NOTICE:  ok: hard delete refused (no delete policy) (42501: permission denied for table wine)
+ fails 
+-------
+ 
+(1 row)
+
+psql:tests/10_security_and_sync.sql:126: NOTICE:  ok: invalid movement rejected
+ eq 
+----
+ 
+(1 row)
+
+psql:tests/10_security_and_sync.sql:127: NOTICE:  ok: validation rejections are permanent
+ eq 
+----
+ 
+(1 row)
+
+psql:tests/10_security_and_sync.sql:134: NOTICE:  ok: missing parent is retryable
+ eq 
+----
+ 
+(1 row)
+
+ become 
+--------
+ 
+(1 row)
+
+psql:tests/10_security_and_sync.sql:139: NOTICE:  ok: stranger sees no wines
+ eq 
+----
+ 
+(1 row)
+
+psql:tests/10_security_and_sync.sql:140: NOTICE:  ok: stranger sees no collections
+ eq 
+----
+ 
+(1 row)
+
+psql:tests/10_security_and_sync.sql:145: NOTICE:  ok: stranger push rejected
+ eq 
+----
+ 
+(1 row)
+
+psql:tests/10_security_and_sync.sql:147: NOTICE:  ok: stranger cannot add themselves as a member (42501: permission denied for table collection_member)
+ fails 
+-------
+ 
+(1 row)
+
+psql:tests/10_security_and_sync.sql:148: NOTICE:  ok: cannot claim an existing collection id (42501: That collection id is already in use)
+ fails 
+-------
+ 
+(1 row)
+
+ bootstrap_collection 
+----------------------
+ 
+(1 row)
+
+psql:tests/10_security_and_sync.sql:156: NOTICE:  ok: cross-collection reference rejected
+ eq 
+----
+ 
+(1 row)
+
+psql:tests/10_security_and_sync.sql:162: NOTICE:  ok: cannot take over a row id from another collection
+ eq 
+----
+ 
+(1 row)
+
+ become 
+--------
+ 
+(1 row)
+
+psql:tests/10_security_and_sync.sql:171: NOTICE:  ok: tokens are stored hashed
+ eq 
+----
+ 
+(1 row)
+
+ become 
+--------
+ 
+(1 row)
+
+psql:tests/10_security_and_sync.sql:174: NOTICE:  ok: invite cannot be used by another email (42501: This invite was sent to a different email address)
+ fails 
+-------
+ 
+(1 row)
+
+psql:tests/10_security_and_sync.sql:175: NOTICE:  ok: non-owner cannot invite (42501: Only the owner can invite people)
+ fails 
+-------
+ 
+(1 row)
+
+ become 
+--------
+ 
+(1 row)
+
+psql:tests/10_security_and_sync.sql:178: NOTICE:  ok: bob accepts
+ eq 
+----
+ 
+(1 row)
+
+psql:tests/10_security_and_sync.sql:179: NOTICE:  ok: invite is single-use (22023: This invite is invalid or has expired)
+ fails 
+-------
+ 
+(1 row)
+
+psql:tests/10_security_and_sync.sql:180: NOTICE:  ok: viewer can read
+ eq 
+----
+ 
+(1 row)
+
+psql:tests/10_security_and_sync.sql:185: NOTICE:  ok: viewer push rejected
+ eq 
+----
+ 
+(1 row)
+
+psql:tests/10_security_and_sync.sql:187: NOTICE:  ok: viewer changed nothing
+ eq 
+----
+ 
+(1 row)
+
+ become 
+--------
+ 
+(1 row)
+
+            accept_invite             
+--------------------------------------
+ aaaaaaaa-0000-4000-8000-000000000001
+(1 row)
+
+psql:tests/10_security_and_sync.sql:195: NOTICE:  ok: editor can record consumption
+ eq 
+----
+ 
+(1 row)
+
+psql:tests/10_security_and_sync.sql:196: NOTICE:  ok: editor cannot remove members (42501: Only the owner can remove members)
+ fails 
+-------
+ 
+(1 row)
+
+ become 
+--------
+ 
+(1 row)
+
+ remove_member 
+---------------
+ 
+(1 row)
+
+psql:tests/10_security_and_sync.sql:200: NOTICE:  ok: owner cannot be removed (22023: The owner cannot be removed)
+ fails 
+-------
+ 
+(1 row)
+
+ become 
+--------
+ 
+(1 row)
+
+psql:tests/10_security_and_sync.sql:202: NOTICE:  ok: removed member loses access
+ eq 
+----
+ 
+(1 row)
+
+ set_config 
+------------
+ 
+(1 row)
+
+psql:tests/10_security_and_sync.sql:208: NOTICE:  ok: anon has no table access at all (42501: permission denied for table wine)
+ fails 
+-------
+ 
+(1 row)
+
+psql:tests/10_security_and_sync.sql:209: NOTICE:  ok: anon cannot call RPCs (42501: permission denied for function my_collections)
+ fails 
+-------
+ 
+(1 row)
+
+psql:tests/10_security_and_sync.sql:215: NOTICE:  ok: owned collection deleted
+ eq 
+----
+ 
+(1 row)
+
+psql:tests/10_security_and_sync.sql:216: NOTICE:  ok: ledger rows cascaded
+ eq 
+----
+ 
+(1 row)
+
+psql:tests/10_security_and_sync.sql:217: NOTICE:  ok: household memberships removed
+ eq 
+----
+ 
+(1 row)
+
+psql:tests/10_security_and_sync.sql:218: NOTICE:  ok: other users untouched
+ eq 
+----
+ 
+(1 row)
+
+psql:tests/10_security_and_sync.sql:220: NOTICE:  ok: users cannot call delete_user_data (42501: permission denied for function delete_user_data)
+ fails 
+-------
+ 
+(1 row)
+
+ALL SERVER TESTS PASSED
+passed: 43 assertions
