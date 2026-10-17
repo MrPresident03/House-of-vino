@@ -28,6 +28,7 @@ class TestApp(
     val clock: TestClock = TestClock(),
     ids: IdGenerator = IdGenerator.Random,
     driver: SqlDriver = createTestDriver(),
+    val collectionId: String = "c0000000-0000-4000-8000-000000000001",
 ) {
     val db: LocalDatabase = DatabaseFactory.open(driver, clock, ids)
     val cellar = CellarRepository(db)
@@ -39,12 +40,13 @@ class TestApp(
     val insights = InsightsRepository(db, locations)
     val importer = ImportService(db, cellar, locations)
     val exporter = ExportService(db, locations)
-
-    val collectionId: String = "c0000000-0000-4000-8000-000000000001"
+    val household = com.houseofvino.data.sync.HouseholdRepository(db)
+    val syncFiles = com.houseofvino.data.sync.SyncFileService(db, household)
+    val conflicts = com.houseofvino.data.sync.ConflictService(db)
 
     init {
         db.catalog.insertCollection(collectionId, "My cellar", null, "owner", clock.now, clock.now)
     }
 
-    fun outboxCount(): Long = db.queryLong("SELECT count(*) FROM sync_outbox") ?: 0L
+    fun journalCount(): Long = db.queryLong("SELECT count(*) FROM journal") ?: 0L
 }

@@ -38,7 +38,7 @@ class CellarRepositoryTest {
         app.locations.create(c, LocationInput(name, LocationKind.RACK, parent, rows, cols))
 
     @Test
-    fun addWineWithPurchaseCreatesStockAndOutbox() {
+    fun addWineWithPurchaseCreatesStockAndJournal() {
         val rack = location("Rack A")
         val v = app.cellar.addWine(c, WineTarget.NewWine(margaux), VintageInput(VintageYear.Year(2015), 2030, 2060, "Producer"),
             LotInput(quantity = 6, locationId = rack, unitPrice = Money(45000, eur), acquiredOn = IsoDate.of(2018, 5, 1), source = "Merchant"),
@@ -48,8 +48,8 @@ class CellarRepositoryTest {
         assertEquals("Rack A", detail.stock.single().locationName)
         assertEquals(listOf("Gift", "Special"), detail.tags.map { it.name })
         assertEquals(2, detail.wine.grapes.size)
-        // wine + 2 grapes + vintage + lot + movement + 2 tags + 2 links + location = 11 synced rows
-        assertEquals(11, app.outboxCount())
+        // wine + 2 grapes + vintage + lot + movement + 2 tags + 2 links + location = 11 synced rows, one journal entry each
+        assertEquals(11, app.journalCount())
         assertEquals(0, app.cellar.stockDrift())
     }
 
@@ -158,6 +158,6 @@ class CellarRepositoryTest {
             app.cellar.addWine(c, WineTarget.NewWine(margaux.copy(grapes = listOf(GrapeShare("A", 80), GrapeShare("B", 40)))),
                 VintageInput(VintageYear.Year(2015)), null)
         }
-        assertEquals(0, app.outboxCount())
+        assertEquals(0, app.journalCount())
     }
 }

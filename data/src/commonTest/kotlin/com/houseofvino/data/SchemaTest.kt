@@ -7,6 +7,7 @@ import com.houseofvino.data.sync.SyncTables
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
 class SchemaTest {
@@ -57,7 +58,7 @@ class SchemaTest {
     }
 
     @Test
-    fun wipeAllErasesEverythingIncludingTheLedgerButKeepsTheDeviceId() {
+    fun wipeAllErasesEverythingIncludingTheLedgerAndRenewsTheDeviceId() {
         val app = TestApp()
         val deviceId = app.settings.get("device_id")
         // Nested locations and a reversal: self-referencing rows must not block the wipe.
@@ -71,15 +72,16 @@ class SchemaTest {
         assertEquals(1L, app.db.queryLong("SELECT count(*) FROM movement WHERE reversal_of IS NOT NULL"))
         com.houseofvino.data.repo.PhotoRepository(app.db).add(app.collectionId, com.houseofvino.data.repo.PhotoOwner.VINTAGE, vintageId, "/photos/p1.jpg", 10, 10, 100)
         app.settings.put("onboarded", "true")
-        assertTrue((app.db.queryLong("SELECT count(*) FROM sync_outbox") ?: 0) > 0)
+        assertTrue((app.db.queryLong("SELECT count(*) FROM journal") ?: 0) > 0)
 
         val paths = app.db.wipeAll()
 
         assertEquals(listOf("/photos/p1.jpg"), paths)
-        for (table in SyncTables.ALL.map { it.name } + listOf("collection", "stock_level", "sync_outbox", "search_doc", "search_fts")) {
+        for (table in SyncTables.ALL.map { it.name } + listOf("collection", "stock_level", "journal", "row_clock", "peer", "household_key", "search_doc", "search_fts")) {
             assertEquals(0L, app.db.queryLong("SELECT count(*) FROM \"$table\""), "$table is empty")
         }
-        assertEquals(deviceId, app.settings.get("device_id"))
+        assertNotEquals(deviceId, app.settings.get("device_id"))
+        assertEquals(app.db.deviceId, app.settings.get("device_id"))
         assertEquals(null, app.settings.get("onboarded"))
         // Immutability is back on after the wipe.
         assertEquals(0L, app.db.queryLong("SELECT count(*) FROM local_maintenance WHERE active = 1"))

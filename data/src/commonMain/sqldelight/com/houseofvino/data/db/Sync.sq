@@ -1,0 +1,81 @@
+-- Change journal, merge state, peers and household keys (docs/SYNC.md).
+
+appendChange:
+INSERT INTO journal(device_id, device_seq, hlc, collection_id, tbl, row_id, body, received_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+
+hasChange:
+SELECT count(*) FROM journal WHERE device_id = ? AND device_seq = ?;
+
+lastSeqFor:
+SELECT coalesce(max(device_seq), 0) FROM journal WHERE device_id = ?;
+
+maxHlc:
+SELECT max(hlc) AS hlc FROM journal;
+
+vector:
+SELECT device_id, max(device_seq) AS seq FROM journal GROUP BY device_id;
+
+changesAfter:
+SELECT * FROM journal WHERE device_id = ? AND device_seq > ? ORDER BY device_seq;
+
+journalCount:
+SELECT count(*) FROM journal;
+
+hasChangeForRow:
+SELECT count(*) FROM journal WHERE tbl = ? AND row_id = ?;
+
+clearJournal:
+DELETE FROM journal;
+
+rowClock:
+SELECT state FROM row_clock WHERE tbl = ? AND row_id = ?;
+
+putRowClock:
+INSERT INTO row_clock(tbl, row_id, state) VALUES (?, ?, ?)
+ON CONFLICT(tbl, row_id) DO UPDATE SET state = excluded.state;
+
+clearRowClocks:
+DELETE FROM row_clock;
+
+-- Peers ---------------------------------------------------------------------------------------
+
+peers:
+SELECT * FROM peer WHERE collection_id = ? ORDER BY removed_at IS NOT NULL, lower(name);
+
+peerById:
+SELECT * FROM peer WHERE device_id = ?;
+
+upsertPeer:
+INSERT INTO peer(device_id, collection_id, name, known_vector, first_seen_at, last_heard_at, last_sent_at, removed_at)
+VALUES (:deviceId, :collectionId, :name, '{}', :now, NULL, NULL, NULL)
+ON CONFLICT(device_id) DO UPDATE SET name = excluded.name, collection_id = excluded.collection_id;
+
+heardFromPeer:
+UPDATE peer SET known_vector = :vector, last_heard_at = :now, name = :name WHERE device_id = :deviceId;
+
+sentToPeers:
+UPDATE peer SET last_sent_at = :now WHERE collection_id = :collectionId AND removed_at IS NULL;
+
+removePeer:
+UPDATE peer SET removed_at = :now WHERE device_id = :deviceId;
+
+clearPeers:
+DELETE FROM peer;
+
+-- Household keys ------------------------------------------------------------------------------
+
+currentKey:
+SELECT * FROM household_key WHERE collection_id = ? AND retired_at IS NULL;
+
+keyById:
+SELECT * FROM household_key WHERE key_id = ?;
+
+insertKey:
+INSERT INTO household_key(key_id, collection_id, secret, created_at, retired_at) VALUES (?, ?, ?, ?, NULL);
+
+retireKeys:
+UPDATE household_key SET retired_at = :now WHERE collection_id = :collectionId AND retired_at IS NULL;
+
+clearKeys:
+DELETE FROM household_key;

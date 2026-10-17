@@ -5,7 +5,7 @@ import app.cash.sqldelight.db.SqlDriver
 import com.houseofvino.core.id.IdGenerator
 import com.houseofvino.core.time.Clock
 import com.houseofvino.data.search.SearchIndex
-import com.houseofvino.data.sync.Outbox
+import com.houseofvino.data.sync.Journal
 import com.houseofvino.data.sync.SyncTable
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -13,23 +13,28 @@ import kotlinx.coroutines.flow.asSharedFlow
 
 /**
  * The local database plus the write discipline that keeps it consistent: every write runs in a
- * transaction, records an outbox operation for each changed synced row, and refreshes the search
- * index for affected documents — all before commit.
+ * transaction, journals each changed synced row for household sync, and refreshes the search
+ * index for affected documents, all before commit.
  */
 class LocalDatabase(
     val driver: SqlDriver,
     val clock: Clock,
     val ids: IdGenerator,
-    val deviceId: String,
+    deviceId: String,
 ) {
+    /** This install's identity in the household. Replaced when the phone is erased. */
+    var deviceId: String = deviceId
+        private set
+
     val db = HouseOfVinoDatabase(driver)
     val catalog get() = db.catalogQueries
     val inventory get() = db.inventoryQueries
     val journal get() = db.journalQueries
     val local get() = db.localQueries
+    val sync get() = db.syncQueries
 
     val searchIndex = SearchIndex(this)
-    val outbox = Outbox(this)
+    val changeLog = Journal(this)
 
     private val _changes = MutableSharedFlow<Set<String>>(extraBufferCapacity = 64)
 
@@ -41,8 +46,9 @@ class LocalDatabase(
     }
 
     /**
-     * Runs [block] in a transaction. Changes recorded with [WriteScope.touched] are written to the
-     * outbox (unless [fromSync]) and re-indexed before the transaction commits.
+     * Runs [block] in a transaction. Changes recorded with [WriteScope.touched] are journaled
+     * (unless [fromSync]: they came from another phone and are journaled already) and re-indexed
+     * before the transaction commits.
      */
     fun <T> write(fromSync: Boolean = false, block: WriteScope.() -> T): T {
         val scope = WriteScope(this)
@@ -69,8 +75,8 @@ class LocalDatabase(
     }, args.size) { args.forEachIndexed { i, a -> bindAny(i, a) } }.value
 
     /**
-     * Erases every synced row and all sync bookkeeping on this device (account deletion, or
-     * "erase this device"), including the collection row; the device id is kept. Immutability
+     * Erases every synced row and all sync bookkeeping on this phone ("Erase this phone"),
+     * including the collection row and the household key. The phone gets a new device id. Immutability
      * triggers are bypassed only for the duration of this transaction. Returns the local paths of
      * photo files, which the caller deletes.
      */
@@ -88,10 +94,13 @@ class LocalDatabase(
             deleteLeavesFirst("location", "parent_id")
             for (table in com.houseofvino.data.sync.SyncTables.ALL.reversed()) driver.execute(null, "DELETE FROM \"${table.name}\"", 0)
             // `collection` goes too: the caller starts a new local collection with a fresh id.
-            for (table in listOf("stock_level", "sync_outbox", "sync_cursor", "sync_conflict", "recent_query", "search_doc", "search_fts", "collection")) {
+            for (table in listOf("stock_level", "journal", "row_clock", "peer", "household_key", "sync_conflict", "recent_query", "search_doc", "search_fts", "collection")) {
                 driver.execute(null, "DELETE FROM $table", 0)
             }
-            driver.execute(null, "DELETE FROM setting WHERE setting_key NOT IN ('device_id', 'active_collection', 'search_index_version')", 0)
+            driver.execute(null, "DELETE FROM setting WHERE setting_key NOT IN ('active_collection', 'search_index_version')", 0)
+            // A new identity: this phone's old change numbers may already be on other phones.
+            deviceId = ids.newId()
+            local.putSetting(com.houseofvino.data.repo.SettingsRepository.KEY_DEVICE_ID, deviceId)
             local.setMaintenance(0)
         }
         _changes.tryEmit(com.houseofvino.data.sync.SyncTables.ALL.map { it.name }.toSet() + setOf("setting", "collection"))
@@ -132,7 +141,7 @@ class WriteScope internal constructor(private val database: LocalDatabase) {
     internal fun flush(enqueue: Boolean) {
         if (touchedRows.isEmpty()) return
         val rows = touchedRows.map { (key, table) -> table to key.second }
-        if (enqueue) rows.forEach { (table, id) -> database.outbox.enqueue(table, id) }
+        if (enqueue) rows.forEach { (table, id) -> database.changeLog.record(table, id) }
         database.searchIndex.reindexForChanges(rows.map { it.first.name to it.second })
     }
 }

@@ -16,7 +16,21 @@ object DatabaseFactory {
     fun open(driver: SqlDriver, clock: Clock = Clock.System, ids: IdGenerator = IdGenerator.Random): LocalDatabase {
         driver.execute(null, "PRAGMA foreign_keys = ON", 0)
         val deviceId = deviceId(driver, ids)
-        return LocalDatabase(driver, clock, ids, deviceId)
+        val db = LocalDatabase(driver, clock, ids, deviceId)
+        journalExistingRows(db)
+        return db
+    }
+
+    /**
+     * Rows written before the change journal existed (schema version 2) are journaled once, so
+     * they reach a partner when the cellar is first shared.
+     */
+    private fun journalExistingRows(db: LocalDatabase) {
+        if (db.local.getSetting(SettingsRepository.KEY_JOURNAL_READY).executeAsOneOrNull() == "1") return
+        db.write(fromSync = true) {
+            db.catalog.allCollections().executeAsList().forEach { db.changeLog.recordUnjournaled(it.id) }
+            db.local.putSetting(SettingsRepository.KEY_JOURNAL_READY, "1")
+        }
     }
 
     private fun deviceId(driver: SqlDriver, ids: IdGenerator): String {

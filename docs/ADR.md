@@ -99,6 +99,9 @@ supabase/    SQL migrations, RLS policies, RPC functions, Edge Function, SQL tes
 
 ## ADR-06 Sync ⚑ privacy
 
+> **Superseded by ADR-13** (2026-10-18). Kept for history.
+
+
 - Local-first. Every write commits locally with an outbox entry in the **same transaction**.
 - Outbox entries carry a client `op_id` (UUID) and the row's `base_rev`. The server records
   applied `op_id`s, so retrying a push is idempotent.
@@ -118,6 +121,9 @@ supabase/    SQL migrations, RLS policies, RPC functions, Edge Function, SQL tes
 
 ## ADR-07 Backend: Supabase ⚑ privacy ⚑ cost
 
+> **Superseded by ADR-13** (2026-10-18): there is no backend.
+
+
 - Postgres + Auth + Storage. A collection is owned by one user. A **household** is a
   collection with additional members (`owner` / `editor` / `viewer`).
 - **Row-level security on every table.** Read: member of the row's collection. Write:
@@ -132,6 +138,9 @@ supabase/    SQL migrations, RLS policies, RPC functions, Edge Function, SQL tes
   current pricing).
 
 ## ADR-08 Account deletion ⚑ irreversible
+
+> **Superseded by ADR-13** (2026-10-18): there are no accounts. "Erase this phone" remains.
+
 
 - Settings → Delete account requires typing a confirmation phrase. The client offers an
   export first.
@@ -190,8 +199,57 @@ All external data sits behind replaceable interfaces in `data/integrations`:
 
 ## ADR-12 Secrets in builds ⚑ privacy
 
+> **Superseded by ADR-13** (2026-10-18): builds contain no service credentials at all.
+
+
 - Supabase URL and anon key come from environment variables (CI) or `local.properties` /
   `iosApp/Configuration/Secrets.xcconfig` (developers). Neither is committed.
 - `core.security.KeyGuard` classifies keys (new `sb_publishable_`/`sb_secret_` keys and
   legacy JWTs, by decoding the JWT payload's `role`). The Android Gradle build, the Xcode
   pre-build script and `BackendConfig` all refuse anything that isn't publishable.
+
+## ADR-13 Serverless household sync ⚑ privacy ⚑ cost ⚑ irreversible
+
+Decision (2026-10-18): the app must cost nothing to run, including when partners share a
+cellar. Supabase and every other backend are removed. Phones exchange changes directly or
+through storage the users already own. Protocol details are in `docs/SYNC.md`.
+
+- **Change journal.** Every committed write appends entries to a local `journal`: one entry
+  per changed row, holding only the fields that changed. Entries are stamped with a hybrid
+  logical clock (HLC) and numbered per device (`device_seq`). Received entries are stored in
+  the same journal, so any phone can forward another phone's changes.
+- **Merge rules** (pure functions in `core.sync`, tested in isolation):
+  - Mutable rows: each field is a last-writer-wins register ordered by (HLC, device id).
+    Every write carries the clock it replaced (`base`). A write whose base isn't the current
+    clock was made without seeing the current value; if the two values differ, the losing
+    value is kept in `sync_conflict` for the user to review.
+  - Movements (stock ledger) and tasting notes are never overwritten: movements are
+    insert-only, so stock is the sum of every device's movements. Negative stock after a
+    merge is flagged, as before.
+  - Deletes are tombstones (`deleted_at` is an ordinary field).
+  - Vintages are never merged automatically (unchanged).
+- **Causal delivery.** Each phone keeps a version vector (highest `device_seq` seen per
+  device). An export contains every entry the receiver lacks, for every device, applied in
+  HLC order. A phone therefore never sees an edit before the row it edits.
+- **Household key** ⚑ privacy. Sharing a cellar creates a random 256-bit key. A partner
+  joins by scanning a QR code (or pasting the invite code) in person. Everything that leaves
+  a phone is encrypted with XChaCha20-Poly1305 under that key, so a messaging app, cloud
+  drive or anyone who intercepts a file sees only ciphertext. The key is stored in the app's
+  private database (the cellar itself is stored there unencrypted, so the key adds no new
+  exposure on the device).
+- **Joining merges** ⚑ irreversible. A phone that joins a household moves its own cellar
+  into the shared one (its rows are re-keyed to the household's collection id) and shares
+  all of it with the partner. This can't be undone automatically; the join screen says so.
+- **Removing a partner** rotates the key. Data the partner already has can't be recalled ⚑
+  privacy; files they send afterwards are rejected. Remaining phones re-pair with a new QR.
+- **Transports** (pluggable; the journal doesn't know about them):
+  1. Sync file — an encrypted, text-armoured file shared through any app (this release).
+  2. Home Wi-Fi, phone to phone (next).
+  3. A shared folder in the users' own Google Drive (`drive.file` scope; free) (later).
+  4. iCloud sharing for all-Apple households (optional, later).
+- ⚑ cost: none for the developer. File transport is free; later transports use the users'
+  own Wi-Fi or cloud storage.
+- Consequences: there are no accounts, no sign-in and no server-side deletion. "Erase this
+  phone" wipes local data. Without a cloud transport, a household's copies live only on its
+  phones; each partner's phone is the other's backup.
+

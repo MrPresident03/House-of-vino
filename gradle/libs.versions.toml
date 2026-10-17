@@ -11,7 +11,6 @@ sqldelight = "2.4.1"
 coroutines = "1.11.0"
 serialization = "1.11.0"
 ktor = "3.5.1"
-supabase = "3.8.0"
 coil = "3.6.3"
 androidx-activity = "1.13.0"
 androidx-core = "1.19.1"
@@ -39,11 +38,6 @@ sqldelight-android-driver = { module = "app.cash.sqldelight:android-driver", ver
 sqldelight-native-driver = { module = "app.cash.sqldelight:native-driver", version.ref = "sqldelight" }
 sqldelight-sqlite-driver = { module = "app.cash.sqldelight:sqlite-driver", version.ref = "sqldelight" }
 
-supabase-bom = { module = "io.github.jan-tennert.supabase:bom", version.ref = "supabase" }
-supabase-auth = { module = "io.github.jan-tennert.supabase:auth-kt" }
-supabase-postgrest = { module = "io.github.jan-tennert.supabase:postgrest-kt" }
-supabase-storage = { module = "io.github.jan-tennert.supabase:storage-kt" }
-supabase-functions = { module = "io.github.jan-tennert.supabase:functions-kt" }
 ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
 ktor-client-okhttp = { module = "io.ktor:ktor-client-okhttp", version.ref = "ktor" }
 ktor-client-darwin = { module = "io.ktor:ktor-client-darwin", version.ref = "ktor" }

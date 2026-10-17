@@ -31,12 +31,8 @@ kotlin {
             implementation(libs.kotlinx.serialization.json)
             implementation(libs.sqldelight.runtime)
             implementation(libs.sqldelight.coroutines)
-            api(project.dependencies.platform(libs.supabase.bom))
-            api(libs.supabase.auth)
-            api(libs.supabase.postgrest)
-            api(libs.supabase.storage)
-            api(libs.supabase.functions)
-            api(libs.ktor.client.core)
+            // Ktor only for the Open Food Facts lookup (ADR-09).
+            implementation(libs.ktor.client.core)
         }
         androidMain.dependencies {
             implementation(libs.sqldelight.android.driver)

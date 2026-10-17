@@ -1,0 +1,51 @@
+-- Serverless household sync (ADR-13, docs/SYNC.md). A replicated change journal replaces the
+-- server outbox and pull cursors.
+
+DROP TABLE sync_outbox;
+DROP TABLE sync_cursor;
+
+-- Every change, made here or received: one row per changed row per write.
+CREATE TABLE journal (
+    seq INTEGER PRIMARY KEY AUTOINCREMENT,
+    device_id TEXT NOT NULL,
+    device_seq INTEGER NOT NULL CHECK (device_seq > 0),
+    hlc TEXT NOT NULL,
+    collection_id TEXT NOT NULL,
+    tbl TEXT NOT NULL,
+    row_id TEXT NOT NULL,
+    body TEXT NOT NULL,
+    received_at INTEGER NOT NULL
+);
+CREATE UNIQUE INDEX journal_device_seq ON journal(device_id, device_seq);
+CREATE INDEX journal_hlc ON journal(hlc);
+CREATE INDEX journal_row ON journal(tbl, row_id);
+
+-- Merge state per mutable row: {"column": [value, "hlc"]}.
+CREATE TABLE row_clock (
+    tbl TEXT NOT NULL,
+    row_id TEXT NOT NULL,
+    state TEXT NOT NULL,
+    PRIMARY KEY (tbl, row_id)
+);
+
+-- Other phones in the household, and what each told us it has seen.
+CREATE TABLE peer (
+    device_id TEXT NOT NULL PRIMARY KEY,
+    collection_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    known_vector TEXT NOT NULL DEFAULT '{}',
+    first_seen_at INTEGER NOT NULL,
+    last_heard_at INTEGER,
+    last_sent_at INTEGER,
+    removed_at INTEGER
+);
+
+-- Household keys. The current key has retired_at NULL; at most one per collection.
+CREATE TABLE household_key (
+    key_id TEXT NOT NULL PRIMARY KEY,
+    collection_id TEXT NOT NULL,
+    secret TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    retired_at INTEGER
+);
+CREATE UNIQUE INDEX household_key_current ON household_key(collection_id) WHERE retired_at IS NULL;

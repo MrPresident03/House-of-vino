@@ -1,4 +1,4 @@
--- Settings, recent and saved searches, sync bookkeeping, search document map.
+-- Settings, recent and saved searches, sync conflicts, search document map.
 
 getSetting:
 SELECT setting_value FROM setting WHERE setting_key = ?;
@@ -40,69 +40,7 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL);
 softDeleteSavedSearch:
 UPDATE saved_search SET deleted_at = :now, updated_at = :now WHERE id = :id;
 
--- Sync outbox ---------------------------------------------------------------------------------
-
-enqueueOp:
-INSERT INTO sync_outbox(op_id, entity, entity_id, collection_id, base_rev, payload, created_at, attempts, next_attempt_at, state)
-VALUES (?, ?, ?, ?, ?, ?, ?, 0, 0, 'PENDING');
-
-unsentOpFor:
-SELECT * FROM sync_outbox WHERE entity = ? AND entity_id = ? AND state = 'PENDING' AND attempts = 0
-ORDER BY seq DESC LIMIT 1;
-
-replacePayload:
-UPDATE sync_outbox SET payload = ? WHERE seq = ?;
-
-pendingOpsFor:
-SELECT * FROM sync_outbox WHERE entity = ? AND entity_id = ? AND state <> 'FAILED_PERMANENT' ORDER BY seq;
-
-dueOps:
-SELECT * FROM sync_outbox WHERE collection_id = :collectionId AND state = 'PENDING' AND next_attempt_at <= :now
-ORDER BY seq LIMIT :limit;
-
-markInFlight:
-UPDATE sync_outbox SET state = 'IN_FLIGHT' WHERE seq IN ?;
-
-resetInFlight:
-UPDATE sync_outbox SET state = 'PENDING' WHERE state = 'IN_FLIGHT';
-
-deleteOp:
-DELETE FROM sync_outbox WHERE op_id = ?;
-
-deleteOpsForEntity:
-DELETE FROM sync_outbox WHERE entity = ? AND entity_id = ? AND state <> 'IN_FLIGHT';
-
-rebaseOps:
-UPDATE sync_outbox SET base_rev = :newRev
-WHERE entity = :entity AND entity_id = :entityId AND state = 'PENDING' AND (base_rev IS :oldRev);
-
-scheduleRetry:
-UPDATE sync_outbox SET state = 'PENDING', attempts = attempts + 1, next_attempt_at = :nextAt, last_error = :error
-WHERE op_id = :opId;
-
-failPermanently:
-UPDATE sync_outbox SET state = 'FAILED_PERMANENT', attempts = attempts + 1, last_error = :error WHERE op_id = :opId;
-
-retryFailed:
-UPDATE sync_outbox SET state = 'PENDING', next_attempt_at = 0 WHERE state = 'FAILED_PERMANENT';
-
-outboxSummary:
-SELECT state, count(*) AS ops, min(created_at) AS oldest, max(last_error) AS any_error FROM sync_outbox GROUP BY state;
-
-outboxForCollection:
-SELECT count(*) FROM sync_outbox WHERE collection_id = ?;
-
-hasPendingFor:
-SELECT count(*) FROM sync_outbox WHERE entity = ? AND entity_id = ? AND state <> 'FAILED_PERMANENT';
-
--- Cursors and conflicts -----------------------------------------------------------------------
-
-cursorFor:
-SELECT rev FROM sync_cursor WHERE collection_id = ? AND entity = ?;
-
-putCursor:
-INSERT INTO sync_cursor(collection_id, entity, rev) VALUES (?, ?, ?)
-ON CONFLICT(collection_id, entity) DO UPDATE SET rev = max(rev, excluded.rev);
+-- Conflicts -----------------------------------------------------------------------------------
 
 insertConflict:
 INSERT INTO sync_conflict(id, entity, entity_id, collection_id, local_payload, server_payload, reason, detected_at, resolved_at)
@@ -119,6 +57,9 @@ UPDATE sync_conflict SET resolved_at = ? WHERE id = ?;
 
 openConflictFor:
 SELECT * FROM sync_conflict WHERE entity = ? AND entity_id = ? AND resolved_at IS NULL;
+
+resolveConflictsFor:
+UPDATE sync_conflict SET resolved_at = :now WHERE entity = :entity AND entity_id = :entityId AND resolved_at IS NULL;
 
 -- Search documents ----------------------------------------------------------------------------
 

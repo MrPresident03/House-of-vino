@@ -126,17 +126,9 @@ INSERT INTO photo(id, collection_id, owner_type, owner_id, local_path, remote_pa
     created_at, updated_at, deleted_at, rev)
 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL);
 
-setPhotoRemotePath:
-UPDATE photo SET remote_path = :remotePath, updated_at = :now WHERE id = :id;
-
 setPhotoLocalPath:
 UPDATE photo SET local_path = :localPath WHERE id = :id;
 
 softDeletePhoto:
 UPDATE photo SET deleted_at = :now, updated_at = :now WHERE id = :id;
 
-photosAwaitingUpload:
-SELECT * FROM photo WHERE remote_path IS NULL AND local_path IS NOT NULL AND deleted_at IS NULL ORDER BY created_at LIMIT ?;
-
-photosAwaitingDownload:
-SELECT * FROM photo WHERE remote_path IS NOT NULL AND local_path IS NULL AND deleted_at IS NULL ORDER BY created_at LIMIT ?;

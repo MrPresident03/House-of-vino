@@ -151,6 +151,7 @@ class SettingsRepository(private val database: LocalDatabase) {
         const val KEY_ONBOARDED = "onboarded"
         const val KEY_ACTIVE_COLLECTION = "active_collection"
         const val KEY_DEVICE_ID = "device_id"
-        const val KEY_LAST_SYNC = "last_sync_at"
+        const val KEY_DEVICE_NAME = "device_name"
+        const val KEY_JOURNAL_READY = "journal_ready"
     }
 }

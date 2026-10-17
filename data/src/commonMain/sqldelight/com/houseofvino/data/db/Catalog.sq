@@ -10,6 +10,9 @@ insertCollection:
 INSERT INTO collection(id, name, owner_id, my_role, created_at, updated_at, deleted_at, rev)
 VALUES (?, ?, ?, ?, ?, ?, NULL, NULL);
 
+renameCollection:
+UPDATE collection SET name = ?, updated_at = ? WHERE id = ?;
+
 upsertCollection:
 INSERT INTO collection(id, name, owner_id, my_role, created_at, updated_at, deleted_at, rev)
 VALUES (:id, :name, :ownerId, :myRole, :createdAt, :updatedAt, :deletedAt, :rev)
