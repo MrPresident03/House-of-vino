@@ -381,7 +381,9 @@ class SearchEngine(private val database: LocalDatabase) {
      */
     private fun scores(scope: String, match: String): Map<String, Double> =
         driver.executeQuery(null,
-            "SELECT d.entity_id, matchinfo(search_fts, 'pcxn') FROM search_fts JOIN search_doc d ON d.docid = search_fts.docid " +
+            // CROSS JOIN pins the join order: with a plain JOIN, SQLite may loop over search_doc and
+            // re-run the full-text match for every document (seconds at 5,000 bottles).
+            "SELECT d.entity_id, matchinfo(search_fts, 'pcxn') FROM search_fts CROSS JOIN search_doc d ON d.docid = search_fts.docid " +
                 "WHERE search_fts MATCH ? AND d.scope = ?", { c ->
                 val out = HashMap<String, Double>()
                 while (c.next().value) {
