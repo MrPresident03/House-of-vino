@@ -268,7 +268,7 @@ LWIN database from Liv-ex, shipped inside the app as a read-only SQLite pack.
   mappings and Open Food Facts.
 - Honesty: a catalogue match is never stored as fact. The best match is applied only when it is
   unambiguous, at MEDIUM confidence, and every field is reviewed in the editor before saving.
-- Cost: none. Matching runs on the phone with no network. The pack adds about 10 MB to the
-  download and roughly 40 MB once copied out on first use.
+- Cost: none. Matching runs on the phone with no network. The pack is about 28 MB (185,544
+  wines); the APK compresses it, and each phone copies it out once on first use.
 - Updating: download a new workbook from Liv-ex, run `tools/lwin/extract.py`, commit
   `tools/lwin/lwin.tsv.gz`. See docs/CATALOGUE.md.
