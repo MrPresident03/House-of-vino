@@ -1,0 +1,40 @@
+name: Release
+
+# Push a tag like v0.1.0 to publish a GitHub Release with the Android app attached.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Build
+        run: |
+          set -o pipefail
+          ./gradlew --stacktrace :androidApp:assembleDebug 2>&1 | tee ci.log
+          cp androidApp/build/outputs/apk/debug/*.apk "house-of-vino-${GITHUB_REF_NAME}.apk"
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" "house-of-vino-${GITHUB_REF_NAME}.apk" \
+            --title "House of Vino $GITHUB_REF_NAME" \
+            --notes "Android: download the .apk below on your phone and open it to install (allow installs from your browser or Files app when asked). This is a test build, not from the Play Store. iPhone: see the README (needs a Mac with Xcode, or TestFlight)." \
+            2>&1 | tee -a ci.log
+      - name: Publish results
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: .github/scripts/publish-results.sh release "${{ job.status }}" ci.log
