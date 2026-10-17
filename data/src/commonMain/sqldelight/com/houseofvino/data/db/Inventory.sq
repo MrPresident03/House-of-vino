@@ -1,0 +1,149 @@
+-- Locations, acquisition lots, the movement ledger, stock levels and slots.
+
+locationById:
+SELECT * FROM location WHERE id = ?;
+
+locationsForCollection:
+SELECT * FROM location WHERE collection_id = ? AND deleted_at IS NULL ORDER BY sort_order, lower(name);
+
+insertLocation:
+INSERT INTO location(id, collection_id, parent_id, name, kind, grid_rows, grid_cols, sort_order, notes,
+    created_at, updated_at, deleted_at, rev)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL);
+
+updateLocation:
+UPDATE location SET parent_id = :parentId, name = :name, kind = :kind, grid_rows = :gridRows, grid_cols = :gridCols,
+    sort_order = :sortOrder, notes = :notes, updated_at = :updatedAt
+WHERE id = :id;
+
+softDeleteLocation:
+UPDATE location SET deleted_at = :now, updated_at = :now WHERE id = :id;
+
+childLocationCount:
+SELECT count(*) FROM location WHERE parent_id = ? AND deleted_at IS NULL;
+
+-- Bottles currently stored per location (direct, not including children).
+bottlesPerLocation:
+SELECT location_key, sum(quantity) AS bottles FROM stock_level s
+JOIN lot l ON l.id = s.lot_id
+WHERE l.collection_id = ? AND l.deleted_at IS NULL AND s.quantity > 0
+GROUP BY location_key;
+
+-- Lots ----------------------------------------------------------------------------------------
+
+lotById:
+SELECT * FROM lot WHERE id = ?;
+
+lotsForVintage:
+SELECT * FROM lot WHERE vintage_id = ? AND deleted_at IS NULL ORDER BY acquired_on, created_at;
+
+insertLot:
+INSERT INTO lot(id, collection_id, vintage_id, format_ml, acquired_on, source, order_ref, unit_price_minor,
+    unit_price_currency, packaging, bottles_per_case, wishlist_item_id, notes, created_at, updated_at, deleted_at, rev)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL);
+
+updateLot:
+UPDATE lot SET format_ml = :formatMl, acquired_on = :acquiredOn, source = :source, order_ref = :orderRef,
+    unit_price_minor = :unitPriceMinor, unit_price_currency = :unitPriceCurrency, packaging = :packaging,
+    bottles_per_case = :bottlesPerCase, notes = :notes, updated_at = :updatedAt
+WHERE id = :id;
+
+softDeleteLot:
+UPDATE lot SET deleted_at = :now, updated_at = :now WHERE id = :id;
+
+-- Existing purchases with the quantity originally received, used to spot re-imported files.
+existingLotsForDedupe:
+SELECT l.id, l.vintage_id, l.format_ml, l.acquired_on, l.unit_price_minor, l.unit_price_currency, l.source,
+    coalesce((SELECT sum(m.delta) FROM movement m WHERE m.lot_id = l.id AND m.kind IN ('PURCHASE', 'OPENING', 'GIFT_IN')), 0) AS received
+FROM lot l WHERE l.collection_id = ? AND l.deleted_at IS NULL;
+
+-- Stock ---------------------------------------------------------------------------------------
+
+stockForLot:
+SELECT * FROM stock_level WHERE lot_id = ? AND quantity <> 0;
+
+stockBucket:
+SELECT quantity FROM stock_level WHERE lot_id = ? AND location_key = ?;
+
+-- All buckets for a vintage with lot purchase dates (for allocation and the detail screen).
+stockForVintage:
+SELECT s.lot_id, s.location_key, s.quantity, l.format_ml, l.acquired_on, l.unit_price_minor, l.unit_price_currency,
+    l.source, loc.name AS location_name
+FROM stock_level s
+JOIN lot l ON l.id = s.lot_id
+LEFT JOIN location loc ON loc.id = nullif(s.location_key, '')
+WHERE l.vintage_id = ? AND l.deleted_at IS NULL AND s.quantity <> 0
+ORDER BY l.acquired_on, s.location_key;
+
+quantityForVintage:
+SELECT coalesce(sum(s.quantity), 0) FROM stock_level s JOIN lot l ON l.id = s.lot_id
+WHERE l.vintage_id = ? AND l.deleted_at IS NULL;
+
+negativeStock:
+SELECT s.lot_id, s.location_key, s.quantity, l.vintage_id FROM stock_level s JOIN lot l ON l.id = s.lot_id
+WHERE l.collection_id = ? AND s.quantity < 0;
+
+clearStockLevels:
+DELETE FROM stock_level;
+
+rebuildStockLevels:
+INSERT INTO stock_level(lot_id, location_key, quantity)
+SELECT lot_id, coalesce(location_id, ''), sum(delta) FROM movement GROUP BY lot_id, coalesce(location_id, '');
+
+-- Compares the cache against the ledger; returns rows that disagree (should always be empty).
+stockDrift:
+SELECT m.lot_id, m.loc, m.ledger, coalesce(s.quantity, 0) AS cached FROM (
+    SELECT lot_id, coalesce(location_id, '') AS loc, sum(delta) AS ledger FROM movement GROUP BY lot_id, coalesce(location_id, '')
+) m LEFT JOIN stock_level s ON s.lot_id = m.lot_id AND s.location_key = m.loc
+WHERE m.ledger <> coalesce(s.quantity, 0);
+
+-- Movements -----------------------------------------------------------------------------------
+
+insertMovement:
+INSERT INTO movement(id, collection_id, lot_id, location_id, delta, kind, occurred_at, transfer_group_id, reversal_of,
+    amount_minor, amount_currency, counterparty, note, device_id, tasting_id, created_at, rev)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL);
+
+movementById:
+SELECT * FROM movement WHERE id = ?;
+
+movementsForLot:
+SELECT * FROM movement WHERE lot_id = ? ORDER BY occurred_at, created_at;
+
+movementsForVintage:
+SELECT m.*, loc.name AS location_name, l.format_ml FROM movement m
+JOIN lot l ON l.id = m.lot_id
+LEFT JOIN location loc ON loc.id = m.location_id
+WHERE l.vintage_id = ?
+ORDER BY m.occurred_at DESC, m.created_at DESC
+LIMIT :limit;
+
+movementsInTransferGroup:
+SELECT * FROM movement WHERE transfer_group_id = ?;
+
+reversedIds:
+SELECT reversal_of FROM movement WHERE reversal_of IN ? AND kind = 'REVERSAL';
+
+setMovementRev:
+UPDATE movement SET rev = ? WHERE id = ?;
+
+-- Slots ---------------------------------------------------------------------------------------
+
+slotsForLocation:
+SELECT * FROM slot WHERE location_id = ? AND deleted_at IS NULL ORDER BY slot_row, slot_col;
+
+slotAt:
+SELECT * FROM slot WHERE location_id = ? AND slot_row = ? AND slot_col = ? AND deleted_at IS NULL;
+
+insertSlot:
+INSERT INTO slot(id, collection_id, location_id, slot_row, slot_col, lot_id, created_at, updated_at, deleted_at, rev)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL);
+
+setSlotLot:
+UPDATE slot SET lot_id = :lotId, updated_at = :now WHERE id = :id;
+
+slotCountForLotAt:
+SELECT count(*) FROM slot WHERE lot_id = ? AND location_id = ? AND deleted_at IS NULL;
+
+slotsForLotAt:
+SELECT * FROM slot WHERE lot_id = ? AND location_id = ? AND deleted_at IS NULL ORDER BY slot_row DESC, slot_col DESC;

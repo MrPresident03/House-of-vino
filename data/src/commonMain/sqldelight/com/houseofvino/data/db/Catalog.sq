@@ -1,0 +1,140 @@
+-- Wine identity: collections, wines, grapes, vintages, barcodes, tags.
+
+collectionById:
+SELECT * FROM collection WHERE id = ?;
+
+allCollections:
+SELECT * FROM collection WHERE deleted_at IS NULL ORDER BY created_at;
+
+insertCollection:
+INSERT INTO collection(id, name, owner_id, my_role, created_at, updated_at, deleted_at, rev)
+VALUES (?, ?, ?, ?, ?, ?, NULL, NULL);
+
+upsertCollection:
+INSERT INTO collection(id, name, owner_id, my_role, created_at, updated_at, deleted_at, rev)
+VALUES (:id, :name, :ownerId, :myRole, :createdAt, :updatedAt, :deletedAt, :rev)
+ON CONFLICT(id) DO UPDATE SET name = excluded.name, owner_id = excluded.owner_id, my_role = excluded.my_role,
+    updated_at = excluded.updated_at, deleted_at = excluded.deleted_at, rev = excluded.rev;
+
+setCollectionOwner:
+UPDATE collection SET owner_id = ?, updated_at = ? WHERE id = ?;
+
+-- Wines ---------------------------------------------------------------------------------------
+
+wineById:
+SELECT * FROM wine WHERE id = ?;
+
+insertWine:
+INSERT INTO wine(id, collection_id, producer, producer_sort, name, color, style, country, region, sub_region,
+    appellation, classification, notes, created_at, updated_at, deleted_at, rev)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL);
+
+updateWine:
+UPDATE wine SET producer = :producer, producer_sort = :producerSort, name = :name, color = :color, style = :style,
+    country = :country, region = :region, sub_region = :subRegion, appellation = :appellation,
+    classification = :classification, notes = :notes, updated_at = :updatedAt
+WHERE id = :id;
+
+softDeleteWine:
+UPDATE wine SET deleted_at = :now, updated_at = :now WHERE id = :id;
+
+winesByIdentity:
+SELECT * FROM wine
+WHERE collection_id = :collectionId AND deleted_at IS NULL AND producer_sort = :producerSort;
+
+countries:
+SELECT country, count(*) AS wines FROM wine WHERE collection_id = ? AND deleted_at IS NULL AND country IS NOT NULL
+GROUP BY country ORDER BY country;
+
+regions:
+SELECT region, count(*) AS wines FROM wine WHERE collection_id = ? AND deleted_at IS NULL AND region IS NOT NULL
+GROUP BY region ORDER BY region;
+
+producers:
+SELECT producer, count(*) AS wines FROM wine WHERE collection_id = ? AND deleted_at IS NULL
+GROUP BY producer_sort ORDER BY producer_sort;
+
+-- Grapes --------------------------------------------------------------------------------------
+
+grapesForWine:
+SELECT * FROM wine_grape WHERE wine_id = ? AND deleted_at IS NULL ORDER BY position;
+
+insertGrape:
+INSERT INTO wine_grape(id, collection_id, wine_id, grape, percent, position, created_at, updated_at, deleted_at, rev)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL);
+
+softDeleteGrape:
+UPDATE wine_grape SET deleted_at = :now, updated_at = :now WHERE id = :id;
+
+allGrapes:
+SELECT grape, count(DISTINCT wine_id) AS wines FROM wine_grape g
+WHERE g.collection_id = ? AND g.deleted_at IS NULL GROUP BY lower(grape) ORDER BY lower(grape);
+
+-- Vintages ------------------------------------------------------------------------------------
+
+vintageById:
+SELECT * FROM vintage WHERE id = ?;
+
+vintagesForWine:
+SELECT * FROM vintage WHERE wine_id = ? AND deleted_at IS NULL
+ORDER BY CASE vintage_kind WHEN 'YEAR' THEN 0 WHEN 'NV' THEN 1 ELSE 2 END, year DESC;
+
+vintageByIdentity:
+SELECT * FROM vintage
+WHERE wine_id = :wineId AND vintage_kind = :kind AND ((:year IS NULL AND year IS NULL) OR year = :year) AND deleted_at IS NULL;
+
+insertVintage:
+INSERT INTO vintage(id, collection_id, wine_id, vintage_kind, year, drink_from, drink_until, drink_window_source,
+    abv_bp, notes, label_photo_id, created_at, updated_at, deleted_at, rev)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL);
+
+updateVintage:
+UPDATE vintage SET vintage_kind = :kind, year = :year, drink_from = :drinkFrom, drink_until = :drinkUntil,
+    drink_window_source = :drinkWindowSource, abv_bp = :abvBp, notes = :notes, label_photo_id = :labelPhotoId,
+    updated_at = :updatedAt
+WHERE id = :id;
+
+softDeleteVintage:
+UPDATE vintage SET deleted_at = :now, updated_at = :now WHERE id = :id;
+
+-- Every live vintage with its wine identity, for duplicate detection and matching.
+identityIndex:
+SELECT v.id AS vintage_id, w.id AS wine_id, w.producer, w.name, v.vintage_kind, v.year
+FROM vintage v JOIN wine w ON w.id = v.wine_id
+WHERE w.collection_id = ? AND v.deleted_at IS NULL AND w.deleted_at IS NULL;
+
+-- Barcodes ------------------------------------------------------------------------------------
+
+barcodesForCode:
+SELECT * FROM barcode WHERE collection_id = ? AND code = ? AND deleted_at IS NULL;
+
+insertBarcode:
+INSERT INTO barcode(id, collection_id, code, symbology, wine_id, vintage_id, format_ml, created_at, updated_at, deleted_at, rev)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL);
+
+-- Tags ----------------------------------------------------------------------------------------
+
+tagsForCollection:
+SELECT t.*, (SELECT count(*) FROM vintage_tag vt WHERE vt.tag_id = t.id AND vt.deleted_at IS NULL) AS uses
+FROM tag t WHERE t.collection_id = ? AND t.deleted_at IS NULL ORDER BY lower(t.name);
+
+tagByName:
+SELECT * FROM tag WHERE collection_id = ? AND lower(name) = lower(?) AND deleted_at IS NULL;
+
+insertTag:
+INSERT INTO tag(id, collection_id, name, color, created_at, updated_at, deleted_at, rev)
+VALUES (?, ?, ?, ?, ?, ?, NULL, NULL);
+
+tagsForVintage:
+SELECT t.* FROM tag t JOIN vintage_tag vt ON vt.tag_id = t.id
+WHERE vt.vintage_id = ? AND vt.deleted_at IS NULL AND t.deleted_at IS NULL ORDER BY lower(t.name);
+
+vintageTagLinks:
+SELECT * FROM vintage_tag WHERE vintage_id = ? AND deleted_at IS NULL;
+
+insertVintageTag:
+INSERT INTO vintage_tag(id, collection_id, vintage_id, tag_id, created_at, updated_at, deleted_at, rev)
+VALUES (?, ?, ?, ?, ?, ?, NULL, NULL);
+
+softDeleteVintageTag:
+UPDATE vintage_tag SET deleted_at = :now, updated_at = :now WHERE id = :id;

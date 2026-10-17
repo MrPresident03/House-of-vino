@@ -1,0 +1,5 @@
+# Copy to local.properties (git-ignored). Both values are optional: without them the app runs
+# in local-only mode. Use the PUBLISHABLE (anon) key only; the build fails on a secret key.
+sdk.dir=/path/to/Android/sdk
+SUPABASE_URL=https://your-project-ref.supabase.co
+SUPABASE_ANON_KEY=sb_publishable_xxxxxxxxxxxxxxxx

@@ -1,0 +1,143 @@
+-- Settings, recent and saved searches, sync bookkeeping, search document map.
+
+getSetting:
+SELECT setting_value FROM setting WHERE setting_key = ?;
+
+putSetting:
+INSERT INTO setting(setting_key, setting_value) VALUES (?, ?)
+ON CONFLICT(setting_key) DO UPDATE SET setting_value = excluded.setting_value;
+
+deleteSetting:
+DELETE FROM setting WHERE setting_key = ?;
+
+-- Recent and saved searches -------------------------------------------------------------------
+
+recordRecentQuery:
+INSERT INTO recent_query(query_text, scope, used_at) VALUES (?, ?, ?)
+ON CONFLICT(query_text, scope) DO UPDATE SET used_at = excluded.used_at;
+
+recentQueries:
+SELECT * FROM recent_query WHERE scope = ? ORDER BY used_at DESC LIMIT ?;
+
+trimRecentQueries:
+DELETE FROM recent_query WHERE scope = :scope AND query_text NOT IN (
+    SELECT query_text FROM recent_query WHERE scope = :scope ORDER BY used_at DESC LIMIT :keep
+);
+
+clearRecentQueries:
+DELETE FROM recent_query;
+
+savedSearches:
+SELECT * FROM saved_search WHERE collection_id = ? AND deleted_at IS NULL ORDER BY lower(name);
+
+savedSearchById:
+SELECT * FROM saved_search WHERE id = ?;
+
+insertSavedSearch:
+INSERT INTO saved_search(id, collection_id, name, scope, query_text, filters_json, sort, created_at, updated_at, deleted_at, rev)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL);
+
+softDeleteSavedSearch:
+UPDATE saved_search SET deleted_at = :now, updated_at = :now WHERE id = :id;
+
+-- Sync outbox ---------------------------------------------------------------------------------
+
+enqueueOp:
+INSERT INTO sync_outbox(op_id, entity, entity_id, collection_id, base_rev, payload, created_at, attempts, next_attempt_at, state)
+VALUES (?, ?, ?, ?, ?, ?, ?, 0, 0, 'PENDING');
+
+unsentOpFor:
+SELECT * FROM sync_outbox WHERE entity = ? AND entity_id = ? AND state = 'PENDING' AND attempts = 0
+ORDER BY seq DESC LIMIT 1;
+
+replacePayload:
+UPDATE sync_outbox SET payload = ? WHERE seq = ?;
+
+pendingOpsFor:
+SELECT * FROM sync_outbox WHERE entity = ? AND entity_id = ? AND state <> 'FAILED_PERMANENT' ORDER BY seq;
+
+dueOps:
+SELECT * FROM sync_outbox WHERE collection_id = :collectionId AND state = 'PENDING' AND next_attempt_at <= :now
+ORDER BY seq LIMIT :limit;
+
+markInFlight:
+UPDATE sync_outbox SET state = 'IN_FLIGHT' WHERE seq IN ?;
+
+resetInFlight:
+UPDATE sync_outbox SET state = 'PENDING' WHERE state = 'IN_FLIGHT';
+
+deleteOp:
+DELETE FROM sync_outbox WHERE op_id = ?;
+
+deleteOpsForEntity:
+DELETE FROM sync_outbox WHERE entity = ? AND entity_id = ? AND state <> 'IN_FLIGHT';
+
+rebaseOps:
+UPDATE sync_outbox SET base_rev = :newRev
+WHERE entity = :entity AND entity_id = :entityId AND state = 'PENDING' AND (base_rev IS :oldRev);
+
+scheduleRetry:
+UPDATE sync_outbox SET state = 'PENDING', attempts = attempts + 1, next_attempt_at = :nextAt, last_error = :error
+WHERE op_id = :opId;
+
+failPermanently:
+UPDATE sync_outbox SET state = 'FAILED_PERMANENT', attempts = attempts + 1, last_error = :error WHERE op_id = :opId;
+
+retryFailed:
+UPDATE sync_outbox SET state = 'PENDING', next_attempt_at = 0 WHERE state = 'FAILED_PERMANENT';
+
+outboxSummary:
+SELECT state, count(*) AS ops, min(created_at) AS oldest, max(last_error) AS any_error FROM sync_outbox GROUP BY state;
+
+outboxForCollection:
+SELECT count(*) FROM sync_outbox WHERE collection_id = ?;
+
+hasPendingFor:
+SELECT count(*) FROM sync_outbox WHERE entity = ? AND entity_id = ? AND state <> 'FAILED_PERMANENT';
+
+-- Cursors and conflicts -----------------------------------------------------------------------
+
+cursorFor:
+SELECT rev FROM sync_cursor WHERE collection_id = ? AND entity = ?;
+
+putCursor:
+INSERT INTO sync_cursor(collection_id, entity, rev) VALUES (?, ?, ?)
+ON CONFLICT(collection_id, entity) DO UPDATE SET rev = max(rev, excluded.rev);
+
+insertConflict:
+INSERT INTO sync_conflict(id, entity, entity_id, collection_id, local_payload, server_payload, reason, detected_at, resolved_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL);
+
+openConflicts:
+SELECT * FROM sync_conflict WHERE resolved_at IS NULL ORDER BY detected_at DESC;
+
+conflictById:
+SELECT * FROM sync_conflict WHERE id = ?;
+
+resolveConflict:
+UPDATE sync_conflict SET resolved_at = ? WHERE id = ?;
+
+openConflictFor:
+SELECT * FROM sync_conflict WHERE entity = ? AND entity_id = ? AND resolved_at IS NULL;
+
+-- Search documents ----------------------------------------------------------------------------
+
+searchDocByKey:
+SELECT * FROM search_doc WHERE doc_key = ?;
+
+insertSearchDoc:
+INSERT INTO search_doc(doc_key, scope, entity_id) VALUES (?, ?, ?);
+
+lastInsertRowId:
+SELECT last_insert_rowid();
+
+deleteSearchDoc:
+DELETE FROM search_doc WHERE docid = ?;
+
+clearSearchDocs:
+DELETE FROM search_doc;
+
+-- Maintenance ---------------------------------------------------------------------------------
+
+setMaintenance:
+INSERT INTO local_maintenance(id, active) VALUES (1, ?) ON CONFLICT(id) DO UPDATE SET active = excluded.active;

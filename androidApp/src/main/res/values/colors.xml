@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Mirrors ui/design/Tokens.kt (light: warm cream; dark: charcoal). -->
+    <color name="hv_bg_light">#FFF2EBDD</color>
+    <color name="hv_bg_dark">#FF1B1819</color>
+    <color name="hv_accent">#FF7B1E34</color>
+    <color name="hv_icon_bg">#FF1B1819</color>
+    <color name="hv_icon_fg">#FFD47A8A</color>
+</resources>

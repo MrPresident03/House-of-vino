@@ -1,0 +1,33 @@
+# Supabase CLI project configuration (https://supabase.com/docs/guides/cli).
+project_id = "house-of-vino"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public"]
+max_rows = 1000
+
+[db]
+port = 54322
+major_version = 16
+
+[auth]
+enabled = true
+site_url = "houseofvino://auth"
+additional_redirect_urls = ["houseofvino://auth"]
+jwt_expiry = 3600
+enable_refresh_token_rotation = true
+enable_signup = true
+
+[auth.email]
+enable_signup = true
+enable_confirmations = true
+otp_length = 6
+otp_expiry = 900
+
+[storage]
+enabled = true
+file_size_limit = "10MiB"
+
+[functions.delete-account]
+verify_jwt = true

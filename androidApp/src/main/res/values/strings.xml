@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">House of Vino</string>
+    <string name="channel_reminders">Drinking-window reminders</string>
+    <string name="channel_reminders_description">A monthly note about bottles nearing the end of their window.</string>
+    <string name="reminder_title">Drinking windows</string>
+</resources>

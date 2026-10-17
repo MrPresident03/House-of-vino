@@ -1,0 +1,142 @@
+-- Tastings, wishlist, merchant links, valuations, exchange rates, photos.
+
+tastingById:
+SELECT * FROM tasting WHERE id = ?;
+
+tastingsForVintage:
+SELECT * FROM tasting WHERE vintage_id = ? AND deleted_at IS NULL ORDER BY tasted_on DESC, created_at DESC;
+
+-- Journal timeline with wine identity, newest first, paged.
+journalPage:
+SELECT t.*, w.producer, w.name AS wine_name, w.color, v.vintage_kind, v.year
+FROM tasting t JOIN vintage v ON v.id = t.vintage_id JOIN wine w ON w.id = v.wine_id
+WHERE t.collection_id = :collectionId AND t.deleted_at IS NULL AND (:minRating IS NULL OR t.rating >= :minRating)
+ORDER BY t.tasted_on DESC, t.created_at DESC
+LIMIT :limit OFFSET :offset;
+
+journalCount:
+SELECT count(*) FROM tasting WHERE collection_id = ? AND deleted_at IS NULL;
+
+insertTasting:
+INSERT INTO tasting(id, collection_id, vintage_id, tasted_on, rating, appearance, nose_intensity, sweetness, acidity,
+    tannin, alcohol, body, flavour_intensity, finish, aromas, notes, occasion, food_pairing, companions, place,
+    format_ml, movement_id, would_buy_again, created_at, updated_at, deleted_at, rev)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL);
+
+updateTasting:
+UPDATE tasting SET tasted_on = :tastedOn, rating = :rating, appearance = :appearance, nose_intensity = :noseIntensity,
+    sweetness = :sweetness, acidity = :acidity, tannin = :tannin, alcohol = :alcohol, body = :body,
+    flavour_intensity = :flavourIntensity, finish = :finish, aromas = :aromas, notes = :notes, occasion = :occasion,
+    food_pairing = :foodPairing, companions = :companions, place = :place, format_ml = :formatMl,
+    would_buy_again = :wouldBuyAgain, updated_at = :updatedAt
+WHERE id = :id;
+
+softDeleteTasting:
+UPDATE tasting SET deleted_at = :now, updated_at = :now WHERE id = :id;
+
+averageRatingForVintage:
+SELECT avg(rating) AS average, count(rating) AS rated FROM tasting WHERE vintage_id = ? AND deleted_at IS NULL AND rating IS NOT NULL;
+
+-- Wishlist ------------------------------------------------------------------------------------
+
+wishlistItemById:
+SELECT * FROM wishlist_item WHERE id = ?;
+
+wishlistPage:
+SELECT i.*, coalesce(w.producer, w2.producer, i.producer) AS display_producer,
+    coalesce(w.name, w2.name, i.name) AS display_name,
+    coalesce(v.vintage_kind, i.vintage_kind) AS display_vintage_kind, coalesce(v.year, i.year) AS display_year,
+    (SELECT min(ml.last_price_minor) FROM merchant_link ml WHERE ml.wishlist_item_id = i.id AND ml.deleted_at IS NULL
+        AND ml.last_price_currency = i.target_price_currency) AS best_price_minor
+FROM wishlist_item i
+LEFT JOIN vintage v ON v.id = i.vintage_id
+LEFT JOIN wine w ON w.id = v.wine_id
+LEFT JOIN wine w2 ON w2.id = i.wine_id
+WHERE i.collection_id = :collectionId AND i.deleted_at IS NULL AND i.status IN :statuses
+ORDER BY CASE i.priority WHEN 'MUST' THEN 0 WHEN 'HIGH' THEN 1 WHEN 'MEDIUM' THEN 2 ELSE 3 END, i.updated_at DESC
+LIMIT :limit OFFSET :offset;
+
+insertWishlistItem:
+INSERT INTO wishlist_item(id, collection_id, vintage_id, wine_id, producer, name, vintage_kind, year, format_ml,
+    desired_qty, target_price_minor, target_price_currency, priority, status, notes, acquired_lot_id,
+    created_at, updated_at, deleted_at, rev)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL);
+
+updateWishlistItem:
+UPDATE wishlist_item SET vintage_id = :vintageId, wine_id = :wineId, producer = :producer, name = :name,
+    vintage_kind = :vintageKind, year = :year, format_ml = :formatMl, desired_qty = :desiredQty,
+    target_price_minor = :targetPriceMinor, target_price_currency = :targetPriceCurrency, priority = :priority,
+    status = :status, notes = :notes, acquired_lot_id = :acquiredLotId, updated_at = :updatedAt
+WHERE id = :id;
+
+softDeleteWishlistItem:
+UPDATE wishlist_item SET deleted_at = :now, updated_at = :now WHERE id = :id;
+
+linksForItem:
+SELECT * FROM merchant_link WHERE wishlist_item_id = ? AND deleted_at IS NULL ORDER BY merchant;
+
+insertMerchantLink:
+INSERT INTO merchant_link(id, collection_id, wishlist_item_id, merchant, url, last_price_minor, last_price_currency,
+    checked_on, created_at, updated_at, deleted_at, rev)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL);
+
+updateMerchantLink:
+UPDATE merchant_link SET merchant = :merchant, url = :url, last_price_minor = :lastPriceMinor,
+    last_price_currency = :lastPriceCurrency, checked_on = :checkedOn, updated_at = :updatedAt
+WHERE id = :id;
+
+softDeleteMerchantLink:
+UPDATE merchant_link SET deleted_at = :now, updated_at = :now WHERE id = :id;
+
+-- Valuations ----------------------------------------------------------------------------------
+
+valuationsForVintage:
+SELECT * FROM valuation WHERE vintage_id = ? AND deleted_at IS NULL ORDER BY as_of DESC, created_at DESC;
+
+insertValuation:
+INSERT INTO valuation(id, collection_id, vintage_id, format_ml, amount_minor, amount_currency, source, as_of, note,
+    created_at, updated_at, deleted_at, rev)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL);
+
+softDeleteValuation:
+UPDATE valuation SET deleted_at = :now, updated_at = :now WHERE id = :id;
+
+-- Exchange rates ------------------------------------------------------------------------------
+
+ratesForCollection:
+SELECT * FROM exchange_rate WHERE collection_id = ? AND deleted_at IS NULL ORDER BY base, quote, as_of DESC;
+
+insertRate:
+INSERT INTO exchange_rate(id, collection_id, base, quote, rate_e8, as_of, source, created_at, updated_at, deleted_at, rev)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL);
+
+softDeleteRate:
+UPDATE exchange_rate SET deleted_at = :now, updated_at = :now WHERE id = :id;
+
+-- Photos --------------------------------------------------------------------------------------
+
+photosFor:
+SELECT * FROM photo WHERE owner_type = ? AND owner_id = ? AND deleted_at IS NULL ORDER BY created_at;
+
+photoById:
+SELECT * FROM photo WHERE id = ?;
+
+insertPhoto:
+INSERT INTO photo(id, collection_id, owner_type, owner_id, local_path, remote_path, mime, width, height, bytes,
+    created_at, updated_at, deleted_at, rev)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL);
+
+setPhotoRemotePath:
+UPDATE photo SET remote_path = :remotePath, updated_at = :now WHERE id = :id;
+
+setPhotoLocalPath:
+UPDATE photo SET local_path = :localPath WHERE id = :id;
+
+softDeletePhoto:
+UPDATE photo SET deleted_at = :now, updated_at = :now WHERE id = :id;
+
+photosAwaitingUpload:
+SELECT * FROM photo WHERE remote_path IS NULL AND local_path IS NOT NULL AND deleted_at IS NULL ORDER BY created_at LIMIT ?;
+
+photosAwaitingDownload:
+SELECT * FROM photo WHERE remote_path IS NOT NULL AND local_path IS NULL AND deleted_at IS NULL ORDER BY created_at LIMIT ?;

@@ -1,0 +1,439 @@
+-- House of Vino local schema, version 1.
+-- The schema is derived from migrations (deriveSchemaFromMigrations = true): a fresh database
+-- runs every migration in order, so a fresh install and an upgraded install are identical.
+-- Conventions: docs/SCHEMA.md. Money is INTEGER minor units + ISO-4217 code, never REAL.
+
+CREATE TABLE collection (
+    id TEXT NOT NULL PRIMARY KEY,
+    name TEXT NOT NULL,
+    owner_id TEXT,
+    my_role TEXT NOT NULL DEFAULT 'owner' CHECK (my_role IN ('owner', 'editor', 'viewer')),
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    deleted_at INTEGER,
+    rev INTEGER
+);
+
+CREATE TABLE wine (
+    id TEXT NOT NULL PRIMARY KEY,
+    collection_id TEXT NOT NULL REFERENCES collection(id) ON DELETE RESTRICT,
+    producer TEXT NOT NULL CHECK (length(trim(producer)) > 0),
+    producer_sort TEXT NOT NULL,
+    name TEXT,
+    color TEXT CHECK (color IN ('RED', 'WHITE', 'ROSE', 'ORANGE')),
+    style TEXT CHECK (style IN ('STILL', 'SPARKLING', 'FORTIFIED', 'SWEET')),
+    country TEXT,
+    region TEXT,
+    sub_region TEXT,
+    appellation TEXT,
+    classification TEXT,
+    notes TEXT,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    deleted_at INTEGER,
+    rev INTEGER
+);
+CREATE INDEX wine_collection_sort ON wine(collection_id, producer_sort);
+CREATE INDEX wine_rev ON wine(collection_id, rev);
+
+CREATE TABLE wine_grape (
+    id TEXT NOT NULL PRIMARY KEY,
+    collection_id TEXT NOT NULL REFERENCES collection(id) ON DELETE RESTRICT,
+    wine_id TEXT NOT NULL REFERENCES wine(id) ON DELETE RESTRICT,
+    grape TEXT NOT NULL CHECK (length(trim(grape)) > 0),
+    percent INTEGER CHECK (percent IS NULL OR percent BETWEEN 0 AND 100),
+    position INTEGER NOT NULL DEFAULT 0,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    deleted_at INTEGER,
+    rev INTEGER
+);
+CREATE INDEX wine_grape_wine ON wine_grape(wine_id);
+CREATE INDEX wine_grape_grape ON wine_grape(grape);
+
+CREATE TABLE vintage (
+    id TEXT NOT NULL PRIMARY KEY,
+    collection_id TEXT NOT NULL REFERENCES collection(id) ON DELETE RESTRICT,
+    wine_id TEXT NOT NULL REFERENCES wine(id) ON DELETE RESTRICT,
+    vintage_kind TEXT NOT NULL CHECK (vintage_kind IN ('YEAR', 'NV', 'UNKNOWN')),
+    year INTEGER CHECK ((vintage_kind = 'YEAR') = (year IS NOT NULL)),
+    drink_from INTEGER,
+    drink_until INTEGER,
+    drink_window_source TEXT,
+    abv_bp INTEGER CHECK (abv_bp IS NULL OR abv_bp BETWEEN 0 AND 8000),
+    notes TEXT,
+    label_photo_id TEXT,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    deleted_at INTEGER,
+    rev INTEGER,
+    CHECK (drink_from IS NULL OR drink_until IS NULL OR drink_from <= drink_until)
+);
+-- Not UNIQUE on purpose: two offline devices may create the same vintage; sync must never fail on
+-- that. The app prevents duplicates at creation time and reports cross-device duplicates for review.
+CREATE INDEX vintage_wine ON vintage(wine_id, vintage_kind, year);
+CREATE INDEX vintage_rev ON vintage(collection_id, rev);
+
+CREATE TABLE barcode (
+    id TEXT NOT NULL PRIMARY KEY,
+    collection_id TEXT NOT NULL REFERENCES collection(id) ON DELETE RESTRICT,
+    code TEXT NOT NULL,
+    symbology TEXT NOT NULL,
+    wine_id TEXT NOT NULL REFERENCES wine(id) ON DELETE RESTRICT,
+    vintage_id TEXT REFERENCES vintage(id) ON DELETE RESTRICT,
+    format_ml INTEGER,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    deleted_at INTEGER,
+    rev INTEGER
+);
+CREATE INDEX barcode_code ON barcode(code);
+
+CREATE TABLE tag (
+    id TEXT NOT NULL PRIMARY KEY,
+    collection_id TEXT NOT NULL REFERENCES collection(id) ON DELETE RESTRICT,
+    name TEXT NOT NULL CHECK (length(trim(name)) BETWEEN 1 AND 40),
+    color TEXT,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    deleted_at INTEGER,
+    rev INTEGER
+);
+CREATE INDEX tag_collection ON tag(collection_id, name);
+
+CREATE TABLE vintage_tag (
+    id TEXT NOT NULL PRIMARY KEY,
+    collection_id TEXT NOT NULL REFERENCES collection(id) ON DELETE RESTRICT,
+    vintage_id TEXT NOT NULL REFERENCES vintage(id) ON DELETE RESTRICT,
+    tag_id TEXT NOT NULL REFERENCES tag(id) ON DELETE RESTRICT,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    deleted_at INTEGER,
+    rev INTEGER
+);
+CREATE INDEX vintage_tag_vintage ON vintage_tag(vintage_id);
+CREATE INDEX vintage_tag_tag ON vintage_tag(tag_id);
+
+CREATE TABLE location (
+    id TEXT NOT NULL PRIMARY KEY,
+    collection_id TEXT NOT NULL REFERENCES collection(id) ON DELETE RESTRICT,
+    parent_id TEXT REFERENCES location(id) ON DELETE RESTRICT,
+    name TEXT NOT NULL CHECK (length(trim(name)) > 0),
+    kind TEXT NOT NULL CHECK (kind IN ('CELLAR', 'FRIDGE', 'RACK', 'SHELF', 'BIN', 'CASE', 'BOX', 'OTHER')),
+    grid_rows INTEGER CHECK (grid_rows IS NULL OR grid_rows BETWEEN 1 AND 200),
+    grid_cols INTEGER CHECK (grid_cols IS NULL OR grid_cols BETWEEN 1 AND 200),
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    notes TEXT,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    deleted_at INTEGER,
+    rev INTEGER,
+    CHECK ((grid_rows IS NULL) = (grid_cols IS NULL))
+);
+CREATE INDEX location_parent ON location(collection_id, parent_id, sort_order);
+
+CREATE TABLE lot (
+    id TEXT NOT NULL PRIMARY KEY,
+    collection_id TEXT NOT NULL REFERENCES collection(id) ON DELETE RESTRICT,
+    vintage_id TEXT NOT NULL REFERENCES vintage(id) ON DELETE RESTRICT,
+    format_ml INTEGER NOT NULL CHECK (format_ml > 0),
+    acquired_on TEXT,
+    source TEXT,
+    order_ref TEXT,
+    unit_price_minor INTEGER CHECK (unit_price_minor IS NULL OR unit_price_minor >= 0),
+    unit_price_currency TEXT,
+    packaging TEXT CHECK (packaging IN ('LOOSE', 'OWC', 'OC', 'CARTON')),
+    bottles_per_case INTEGER CHECK (bottles_per_case IS NULL OR bottles_per_case > 0),
+    wishlist_item_id TEXT,
+    notes TEXT,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    deleted_at INTEGER,
+    rev INTEGER,
+    CHECK ((unit_price_minor IS NULL) = (unit_price_currency IS NULL))
+);
+CREATE INDEX lot_vintage ON lot(vintage_id);
+CREATE INDEX lot_rev ON lot(collection_id, rev);
+
+-- Append-only inventory ledger. Only `rev` may be updated (set after a successful push).
+CREATE TABLE movement (
+    id TEXT NOT NULL PRIMARY KEY,
+    collection_id TEXT NOT NULL REFERENCES collection(id) ON DELETE RESTRICT,
+    lot_id TEXT NOT NULL REFERENCES lot(id) ON DELETE RESTRICT,
+    location_id TEXT REFERENCES location(id) ON DELETE RESTRICT,
+    delta INTEGER NOT NULL CHECK (delta <> 0),
+    kind TEXT NOT NULL CHECK (kind IN ('PURCHASE', 'OPENING', 'CONSUME', 'SELL', 'GIFT_OUT', 'GIFT_IN', 'LOSS',
+                                       'TRANSFER_OUT', 'TRANSFER_IN', 'ADJUST', 'REVERSAL')),
+    occurred_at INTEGER NOT NULL,
+    transfer_group_id TEXT,
+    reversal_of TEXT REFERENCES movement(id) ON DELETE RESTRICT,
+    amount_minor INTEGER,
+    amount_currency TEXT,
+    counterparty TEXT,
+    note TEXT,
+    device_id TEXT NOT NULL,
+    tasting_id TEXT,
+    created_at INTEGER NOT NULL,
+    rev INTEGER,
+    CHECK (kind NOT IN ('PURCHASE', 'OPENING', 'GIFT_IN', 'TRANSFER_IN') OR delta > 0),
+    CHECK (kind NOT IN ('CONSUME', 'SELL', 'GIFT_OUT', 'LOSS', 'TRANSFER_OUT') OR delta < 0),
+    CHECK ((kind IN ('TRANSFER_IN', 'TRANSFER_OUT')) = (transfer_group_id IS NOT NULL)),
+    CHECK ((kind = 'REVERSAL') = (reversal_of IS NOT NULL)),
+    CHECK ((amount_minor IS NULL) = (amount_currency IS NULL))
+);
+CREATE INDEX movement_lot ON movement(lot_id, occurred_at);
+CREATE INDEX movement_location ON movement(location_id);
+CREATE INDEX movement_reversal ON movement(reversal_of);
+CREATE INDEX movement_rev ON movement(collection_id, rev);
+
+-- Set to 1 only while wiping a collection (sign-out / leaving a household); bypasses immutability.
+CREATE TABLE local_maintenance (
+    id INTEGER NOT NULL PRIMARY KEY CHECK (id = 1),
+    active INTEGER NOT NULL
+);
+
+-- Cache of SUM(movement.delta) per (lot, location). location_key = '' means unassigned.
+CREATE TABLE stock_level (
+    lot_id TEXT NOT NULL,
+    location_key TEXT NOT NULL,
+    quantity INTEGER NOT NULL,
+    PRIMARY KEY (lot_id, location_key)
+);
+
+CREATE TRIGGER movement_stock_after_insert AFTER INSERT ON movement
+BEGIN
+    INSERT OR IGNORE INTO stock_level(lot_id, location_key, quantity)
+        VALUES (new.lot_id, coalesce(new.location_id, ''), 0);
+    UPDATE stock_level SET quantity = quantity + new.delta
+        WHERE lot_id = new.lot_id AND location_key = coalesce(new.location_id, '');
+END;
+
+CREATE TRIGGER movement_immutable_update BEFORE UPDATE OF
+    id, collection_id, lot_id, location_id, delta, kind, occurred_at, transfer_group_id, reversal_of,
+    amount_minor, amount_currency, counterparty, note, device_id, tasting_id, created_at
+ON movement
+WHEN (SELECT count(*) FROM local_maintenance WHERE active = 1) = 0
+BEGIN
+    SELECT RAISE(ABORT, 'movement rows are immutable');
+END;
+
+CREATE TRIGGER movement_immutable_delete BEFORE DELETE ON movement
+WHEN (SELECT count(*) FROM local_maintenance WHERE active = 1) = 0
+BEGIN
+    SELECT RAISE(ABORT, 'movement rows are immutable');
+END;
+
+CREATE TABLE slot (
+    id TEXT NOT NULL PRIMARY KEY,
+    collection_id TEXT NOT NULL REFERENCES collection(id) ON DELETE RESTRICT,
+    location_id TEXT NOT NULL REFERENCES location(id) ON DELETE RESTRICT,
+    slot_row INTEGER NOT NULL CHECK (slot_row >= 1),
+    slot_col INTEGER NOT NULL CHECK (slot_col >= 1),
+    lot_id TEXT REFERENCES lot(id) ON DELETE RESTRICT,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    deleted_at INTEGER,
+    rev INTEGER
+);
+CREATE INDEX slot_location ON slot(location_id, slot_row, slot_col);
+CREATE INDEX slot_lot ON slot(lot_id);
+
+CREATE TABLE tasting (
+    id TEXT NOT NULL PRIMARY KEY,
+    collection_id TEXT NOT NULL REFERENCES collection(id) ON DELETE RESTRICT,
+    vintage_id TEXT NOT NULL REFERENCES vintage(id) ON DELETE RESTRICT,
+    tasted_on TEXT NOT NULL,
+    rating INTEGER CHECK (rating IS NULL OR rating BETWEEN 0 AND 100),
+    appearance TEXT,
+    nose_intensity TEXT,
+    sweetness TEXT,
+    acidity TEXT,
+    tannin TEXT,
+    alcohol TEXT,
+    body TEXT,
+    flavour_intensity TEXT,
+    finish TEXT,
+    aromas TEXT,
+    notes TEXT,
+    occasion TEXT,
+    food_pairing TEXT,
+    companions TEXT,
+    place TEXT,
+    format_ml INTEGER,
+    movement_id TEXT,
+    would_buy_again INTEGER,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    deleted_at INTEGER,
+    rev INTEGER
+);
+CREATE INDEX tasting_vintage ON tasting(vintage_id, tasted_on);
+CREATE INDEX tasting_date ON tasting(collection_id, tasted_on);
+
+CREATE TABLE wishlist_item (
+    id TEXT NOT NULL PRIMARY KEY,
+    collection_id TEXT NOT NULL REFERENCES collection(id) ON DELETE RESTRICT,
+    vintage_id TEXT REFERENCES vintage(id) ON DELETE RESTRICT,
+    wine_id TEXT REFERENCES wine(id) ON DELETE RESTRICT,
+    producer TEXT,
+    name TEXT,
+    vintage_kind TEXT CHECK (vintage_kind IS NULL OR vintage_kind IN ('YEAR', 'NV', 'UNKNOWN')),
+    year INTEGER,
+    format_ml INTEGER,
+    desired_qty INTEGER NOT NULL DEFAULT 1 CHECK (desired_qty >= 1),
+    target_price_minor INTEGER CHECK (target_price_minor IS NULL OR target_price_minor >= 0),
+    target_price_currency TEXT,
+    priority TEXT NOT NULL CHECK (priority IN ('LOW', 'MEDIUM', 'HIGH', 'MUST')),
+    status TEXT NOT NULL CHECK (status IN ('WANTED', 'WATCHING', 'ORDERED', 'ACQUIRED', 'CANCELLED')),
+    notes TEXT,
+    acquired_lot_id TEXT,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    deleted_at INTEGER,
+    rev INTEGER,
+    CHECK (vintage_id IS NOT NULL OR wine_id IS NOT NULL OR length(trim(coalesce(producer, ''))) > 0),
+    CHECK ((target_price_minor IS NULL) = (target_price_currency IS NULL))
+);
+CREATE INDEX wishlist_status ON wishlist_item(collection_id, status, priority);
+
+CREATE TABLE merchant_link (
+    id TEXT NOT NULL PRIMARY KEY,
+    collection_id TEXT NOT NULL REFERENCES collection(id) ON DELETE RESTRICT,
+    wishlist_item_id TEXT NOT NULL REFERENCES wishlist_item(id) ON DELETE RESTRICT,
+    merchant TEXT NOT NULL,
+    url TEXT,
+    last_price_minor INTEGER,
+    last_price_currency TEXT,
+    checked_on TEXT,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    deleted_at INTEGER,
+    rev INTEGER,
+    CHECK ((last_price_minor IS NULL) = (last_price_currency IS NULL))
+);
+CREATE INDEX merchant_link_item ON merchant_link(wishlist_item_id);
+
+CREATE TABLE valuation (
+    id TEXT NOT NULL PRIMARY KEY,
+    collection_id TEXT NOT NULL REFERENCES collection(id) ON DELETE RESTRICT,
+    vintage_id TEXT NOT NULL REFERENCES vintage(id) ON DELETE RESTRICT,
+    format_ml INTEGER NOT NULL,
+    amount_minor INTEGER NOT NULL CHECK (amount_minor >= 0),
+    amount_currency TEXT NOT NULL,
+    source TEXT NOT NULL CHECK (length(trim(source)) > 0),
+    as_of TEXT NOT NULL,
+    note TEXT,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    deleted_at INTEGER,
+    rev INTEGER
+);
+CREATE INDEX valuation_vintage ON valuation(vintage_id, format_ml, as_of);
+
+CREATE TABLE photo (
+    id TEXT NOT NULL PRIMARY KEY,
+    collection_id TEXT NOT NULL REFERENCES collection(id) ON DELETE RESTRICT,
+    owner_type TEXT NOT NULL CHECK (owner_type IN ('VINTAGE', 'TASTING', 'LOT')),
+    owner_id TEXT NOT NULL,
+    local_path TEXT,
+    remote_path TEXT,
+    mime TEXT NOT NULL,
+    width INTEGER NOT NULL,
+    height INTEGER NOT NULL,
+    bytes INTEGER NOT NULL,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    deleted_at INTEGER,
+    rev INTEGER
+);
+CREATE INDEX photo_owner ON photo(owner_type, owner_id);
+
+CREATE TABLE exchange_rate (
+    id TEXT NOT NULL PRIMARY KEY,
+    collection_id TEXT NOT NULL REFERENCES collection(id) ON DELETE RESTRICT,
+    base TEXT NOT NULL,
+    quote TEXT NOT NULL,
+    rate_e8 INTEGER NOT NULL CHECK (rate_e8 > 0),
+    as_of TEXT NOT NULL,
+    source TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    deleted_at INTEGER,
+    rev INTEGER,
+    CHECK (base <> quote)
+);
+
+CREATE TABLE saved_search (
+    id TEXT NOT NULL PRIMARY KEY,
+    collection_id TEXT NOT NULL REFERENCES collection(id) ON DELETE RESTRICT,
+    name TEXT NOT NULL,
+    scope TEXT NOT NULL,
+    query_text TEXT NOT NULL,
+    filters_json TEXT NOT NULL,
+    sort TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    deleted_at INTEGER,
+    rev INTEGER
+);
+
+-- Local-only tables ---------------------------------------------------------------------------
+
+CREATE TABLE recent_query (
+    query_text TEXT NOT NULL,
+    scope TEXT NOT NULL,
+    used_at INTEGER NOT NULL,
+    PRIMARY KEY (query_text, scope)
+);
+
+CREATE TABLE setting (
+    setting_key TEXT NOT NULL PRIMARY KEY,
+    setting_value TEXT NOT NULL
+);
+
+CREATE TABLE sync_outbox (
+    seq INTEGER PRIMARY KEY AUTOINCREMENT,
+    op_id TEXT NOT NULL UNIQUE,
+    entity TEXT NOT NULL,
+    entity_id TEXT NOT NULL,
+    collection_id TEXT NOT NULL,
+    base_rev INTEGER,
+    payload TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    attempts INTEGER NOT NULL DEFAULT 0,
+    next_attempt_at INTEGER NOT NULL DEFAULT 0,
+    last_error TEXT,
+    state TEXT NOT NULL DEFAULT 'PENDING' CHECK (state IN ('PENDING', 'IN_FLIGHT', 'FAILED_PERMANENT'))
+);
+CREATE INDEX sync_outbox_entity ON sync_outbox(entity, entity_id, state);
+CREATE INDEX sync_outbox_due ON sync_outbox(state, next_attempt_at, seq);
+
+CREATE TABLE sync_cursor (
+    collection_id TEXT NOT NULL,
+    entity TEXT NOT NULL,
+    rev INTEGER NOT NULL,
+    PRIMARY KEY (collection_id, entity)
+);
+
+CREATE TABLE sync_conflict (
+    id TEXT NOT NULL PRIMARY KEY,
+    entity TEXT NOT NULL,
+    entity_id TEXT NOT NULL,
+    collection_id TEXT NOT NULL,
+    local_payload TEXT NOT NULL,
+    server_payload TEXT,
+    reason TEXT NOT NULL,
+    detected_at INTEGER NOT NULL,
+    resolved_at INTEGER
+);
+CREATE INDEX sync_conflict_open ON sync_conflict(resolved_at, detected_at);
+
+-- Maps search documents to FTS docids. The FTS4 tables themselves are created at runtime by
+-- SearchIndex (they are derived data and are rebuilt whenever the index format changes).
+CREATE TABLE search_doc (
+    docid INTEGER PRIMARY KEY AUTOINCREMENT,
+    doc_key TEXT NOT NULL UNIQUE,
+    scope TEXT NOT NULL,
+    entity_id TEXT NOT NULL
+);
+CREATE INDEX search_doc_entity ON search_doc(scope, entity_id);

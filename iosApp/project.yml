@@ -1,0 +1,74 @@
+# XcodeGen spec. Generate the Xcode project with:  cd iosApp && xcodegen generate
+name: HouseOfVino
+options:
+  bundleIdPrefix: com.houseofvino
+  deploymentTarget:
+    iOS: "16.0"
+  createIntermediateGroups: true
+configFiles:
+  Debug: Configuration/Config.xcconfig
+  Release: Configuration/Config.xcconfig
+settings:
+  base:
+    MARKETING_VERSION: 0.1.0
+    CURRENT_PROJECT_VERSION: 1
+    SWIFT_VERSION: "5.0"
+targets:
+  HouseOfVino:
+    type: application
+    platform: iOS
+    sources:
+      - path: iosApp
+    info:
+      path: iosApp/Info.plist
+      properties:
+        CFBundleDisplayName: House of Vino
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        UILaunchScreen:
+          UIColorName: LaunchBackground
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
+        UISupportedInterfaceOrientations~ipad: [UIInterfaceOrientationPortrait, UIInterfaceOrientationPortraitUpsideDown, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
+        CADisableMinimumFrameDurationOnPhone: true
+        ITSAppUsesNonExemptEncryption: false
+        NSCameraUsageDescription: The camera reads barcodes and wine labels on this device. A label photo is kept only if you save it with the bottle.
+        UIBackgroundModes: [fetch]
+        BGTaskSchedulerPermittedIdentifiers: [com.houseofvino.sync]
+        # Filled from Configuration/Secrets.xcconfig (git-ignored) or CI environment. Both may be empty:
+        # the app then runs in local-only mode.
+        SupabaseUrl: $(SUPABASE_URL)
+        SupabaseAnonKey: $(SUPABASE_ANON_KEY)
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.houseofvino.app
+        PRODUCT_NAME: HouseOfVino
+        TARGETED_DEVICE_FAMILY: "1,2"
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: $(HV_DEVELOPMENT_TEAM)
+        ENABLE_USER_SCRIPT_SANDBOXING: NO
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        FRAMEWORK_SEARCH_PATHS: ["$(inherited)", "$(SRCROOT)/../composeApp/build/xcode-frameworks/$(CONFIGURATION)/$(SDK_NAME)"]
+        # SQLDelight's native driver links the system SQLite.
+        OTHER_LDFLAGS: ["$(inherited)", "-framework", "ComposeApp", "-lsqlite3"]
+    preBuildScripts:
+      - name: Refuse privileged Supabase keys
+        script: '"$SRCROOT/scripts/check-supabase-key.sh"'
+        basedOnDependencyAnalysis: false
+      - name: Compile Kotlin framework
+        script: |
+          if [ "YES" = "$OVERRIDE_KOTLIN_BUILD_IDE_SUPPORTED" ]; then
+            echo "Skipping Gradle (OVERRIDE_KOTLIN_BUILD_IDE_SUPPORTED=YES)"
+            exit 0
+          fi
+          cd "$SRCROOT/.."
+          ./gradlew :composeApp:embedAndSignAppleFrameworkForXcode
+        basedOnDependencyAnalysis: false
+schemes:
+  HouseOfVino:
+    build:
+      targets:
+        HouseOfVino: all
+    run:
+      config: Debug
+    archive:
+      config: Release
