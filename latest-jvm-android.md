@@ -1,124 +1,109 @@
 # jvm-android: failure
 
-- commit: ad7107afe589359335cc7f375bf95646f6478cf6
-- run: https://github.com/MrPresident03/House-of-vino/actions/runs/39014063512
-- tests: 120 run, 3 failed, 0 skipped
-
-## Compiler errors (2)
-```
-e: file:///home/runner/work/House-of-vino/House-of-vino/composeApp/src/jvmTest/kotlin/com/houseofvino/app/CriticalFlowsTest.kt:38:19 Argument type mismatch: actual type is 'Long', but 'String?' was expected.
-e: file:///home/runner/work/House-of-vino/House-of-vino/composeApp/src/jvmTest/kotlin/com/houseofvino/app/CriticalFlowsTest.kt:77:19 Argument type mismatch: actual type is 'Long', but 'String?' was expected.
-```
+- commit: 05b9b9162394003a02371098e77c1a52814c653f
+- run: https://github.com/MrPresident03/House-of-vino/actions/runs/39014295459
+- tests: 129 run, 3 failed, 0 skipped
 
 ## Gradle failures
 ```
 * What went wrong:
-Execution failed for task ':data:jvmTest'.
-> There were failing tests. See the report at: file:///home/runner/work/House-of-vino/House-of-vino/data/build/reports/tests/jvmTest/index.html
+Execution failed for task ':composeApp:jvmTest'.
+> There were failing tests. See the report at: file:///home/runner/work/House-of-vino/House-of-vino/composeApp/build/reports/tests/jvmTest/index.html
 
 * Try:
 > Run with --scan to get full insights from a Build Scan (powered by Develocity).
 
 * Exception is:
----
-* What went wrong:
-Execution failed for task ':composeApp:compileTestKotlinJvm' (registered in build file 'composeApp/build.gradle.kts').
-> A failure occurred while executing org.jetbrains.kotlin.compilerRunner.btapi.BuildToolsApiCompilationWork
-   > Kotlin compiler: ARGUMENT_TYPE_MISMATCH
-       Kotlin compiler error
-         Argument type mismatch: actual type is 'Long', but 'String?' was expected.
-         Location: /home/runner/work/House-of-vino/House-of-vino/composeApp/src/jvmTest/kotlin/com/houseofvino/app/CriticalFlowsTest.kt line 38
-
 ```
 
 ## Failed tests (3)
 
-### com.houseofvino.data.SearchEngineTest.indexFollowsEditsAndDeletes[jvm]
+### com.houseofvino.app.CriticalFlowsTest.firstRunAddWineWithBottlesThenDrinkOneWithANote[jvm]
 ```
-org.sqlite.SQLiteException: [SQLITE_CORRUPT_VTAB] Content in the virtual table is corrupt (database disk image is malformed)
-org.sqlite.SQLiteException: [SQLITE_CORRUPT_VTAB] Content in the virtual table is corrupt (database disk image is malformed)
-	at org.sqlite.core.DB.newSQLException(DB.java:1182)
-	at org.sqlite.core.DB.newSQLException(DB.java:1193)
-	at org.sqlite.core.DB.execute(DB.java:991)
-	at org.sqlite.jdbc3.JDBC3PreparedStatement.lambda$executeQuery$1(JDBC3PreparedStatement.java:93)
-	at org.sqlite.jdbc3.JDBC3Statement.withConnectionTimeout(JDBC3Statement.java:464)
-	at org.sqlite.jdbc3.JDBC3PreparedStatement.executeQuery(JDBC3PreparedStatement.java:88)
-	at app.cash.sqldelight.driver.jdbc.JdbcPreparedStatement.executeQuery(JdbcDriver.kt:288)
-	at app.cash.sqldelight.driver.jdbc.JdbcDriver.executeQuery(JdbcDriver.kt:161)
-	at com.houseofvino.data.search.SearchEngine.vocabularyNear(SearchEngine.kt:119)
-	at com.houseofvino.data.search.SearchEngine.runWithTypoFallback(SearchEngine.kt:101)
-	at com.houseofvino.data.search.SearchEngine.searchCellar(SearchEngine.kt:83)
-	at com.houseofvino.data.SearchEngineTest.cellar(SearchEngineTest.kt:46)
-	at com.houseofvino.data.SearchEngineTest.cellar$default(SearchEngineTest.kt:45)
-	at com.houseofvino.data.SearchEngineTest.indexFollowsEditsAndDeletes(SearchEngineTest.kt:140)
-	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
-	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
-	at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:59)
-	at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)
-	at org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:56)
-	at org.junit.internal.runners.statements.InvokeMethod.evaluate(InvokeMethod.java:17)
-	at org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)
-	at org.junit.runners.BlockJUnit4ClassRunner$1.evaluate(BlockJUnit4ClassRunner.java:100)
-	at org.junit.runners.ParentRunner.runLeaf(ParentRunner.java:366)
-	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:103)
-```
-
-### com.houseofvino.data.SearchEngineTest.matchesAccentInsensitivePrefixesAcrossFields[jvm]
-```
-org.sqlite.SQLiteException: [SQLITE_CORRUPT_VTAB] Content in the virtual table is corrupt (database disk image is malformed)
-org.sqlite.SQLiteException: [SQLITE_CORRUPT_VTAB] Content in the virtual table is corrupt (database disk image is malformed)
-	at org.sqlite.core.DB.newSQLException(DB.java:1182)
-	at org.sqlite.core.DB.newSQLException(DB.java:1193)
-	at org.sqlite.core.DB.execute(DB.java:991)
-	at org.sqlite.jdbc3.JDBC3PreparedStatement.lambda$executeQuery$1(JDBC3PreparedStatement.java:93)
-	at org.sqlite.jdbc3.JDBC3Statement.withConnectionTimeout(JDBC3Statement.java:464)
-	at org.sqlite.jdbc3.JDBC3PreparedStatement.executeQuery(JDBC3PreparedStatement.java:88)
-	at app.cash.sqldelight.driver.jdbc.JdbcPreparedStatement.executeQuery(JdbcDriver.kt:288)
-	at app.cash.sqldelight.driver.jdbc.JdbcDriver.executeQuery(JdbcDriver.kt:161)
-	at com.houseofvino.data.search.SearchEngine.vocabularyNear(SearchEngine.kt:119)
-	at com.houseofvino.data.search.SearchEngine.runWithTypoFallback(SearchEngine.kt:101)
-	at com.houseofvino.data.search.SearchEngine.searchCellar(SearchEngine.kt:83)
-	at com.houseofvino.data.SearchEngineTest.cellar(SearchEngineTest.kt:46)
-	at com.houseofvino.data.SearchEngineTest.cellar$default(SearchEngineTest.kt:45)
-	at com.houseofvino.data.SearchEngineTest.matchesAccentInsensitivePrefixesAcrossFields(SearchEngineTest.kt:61)
-	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
-	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
-	at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:59)
-	at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)
-	at org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:56)
-	at org.junit.internal.runners.statements.InvokeMethod.evaluate(InvokeMethod.java:17)
-	at org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)
-	at org.junit.runners.BlockJUnit4ClassRunner$1.evaluate(BlockJUnit4ClassRunner.java:100)
-	at org.junit.runners.ParentRunner.runLeaf(ParentRunner.java:366)
-	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:103)
+java.lang.IllegalStateException: Method setCurrentState must be called on the main thread
+java.lang.IllegalStateException: Method setCurrentState must be called on the main thread
+	at androidx.lifecycle.LifecycleRegistry.enforceMainThreadIfNeeded(LifecycleRegistry.kt:382)
+	at androidx.lifecycle.LifecycleRegistry.setCurrentState(LifecycleRegistry.kt:139)
+	at androidx.navigation.internal.NavBackStackEntryImpl.updateState$navigation_common(NavBackStackEntryImpl.kt:109)
+	at androidx.navigation.internal.NavBackStackEntryImpl.setMaxLifecycle$navigation_common(NavBackStackEntryImpl.kt:86)
+	at androidx.navigation.NavBackStackEntry.setMaxLifecycle(NavBackStackEntry.nonAndroid.kt:130)
+	at androidx.navigation.internal.NavControllerImpl.popEntryFromBackStack$navigation_runtime(NavControllerImpl.kt:612)
+	at androidx.navigation.internal.NavControllerImpl.executePopOperations$lambda$0(NavControllerImpl.kt:488)
+	at androidx.navigation.internal.NavControllerImpl.pop$navigation_runtime(NavControllerImpl.kt:247)
+	at androidx.navigation.NavController$NavControllerNavigatorState.pop(NavController.nonAndroid.kt:102)
+	at androidx.navigation.NavigatorState.popWithTransition(NavigatorState.kt:141)
+	at androidx.navigation.NavController$NavControllerNavigatorState.popWithTransition(NavController.nonAndroid.kt:106)
+	at androidx.navigation.compose.ComposeNavigator.popBackStack(ComposeNavigator.kt:66)
+	at androidx.navigation.internal.NavControllerImpl.popBackStackInternal$navigation_runtime(NavControllerImpl.kt:202)
+	at androidx.navigation.internal.NavControllerImpl.executePopOperations$navigation_runtime(NavControllerImpl.kt:485)
+	at androidx.navigation.internal.NavControllerImpl.popBackStackInternal$navigation_runtime(NavControllerImpl.kt:409)
+	at androidx.navigation.internal.NavControllerImpl.navigate$navigation_runtime(NavControllerImpl.kt:1174)
+	at androidx.navigation.internal.NavControllerImpl.navigate$navigation_runtime(NavControllerImpl.kt:1552)
+	at androidx.navigation.internal.NavControllerImpl.navigate$navigation_runtime(NavControllerImpl.kt:1570)
+	at androidx.navigation.internal.NavControllerImpl.navigate$navigation_runtime$default(NavControllerImpl.kt:1565)
+	at androidx.navigation.internal.NavControllerImpl.navigate$navigation_runtime(NavControllerImpl.kt:1562)
+	at androidx.navigation.NavController.navigate(NavController.nonAndroid.kt:378)
+	at com.houseofvino.app.ui.navigation.AppNavHostKt.AppNavHost$lambda$1$0$0$0$0(AppNavHost.kt:57)
+	at com.houseofvino.app.ui.settings.SyncAndOnboardingKt.FirstRunScreen$finish(SyncAndOnboarding.kt:173)
+	at com.houseofvino.app.ui.settings.SyncAndOnboardingKt.FirstRunScreen$lambda$6$3$0(SyncAndOnboarding.kt:182)
 ```
 
-### com.houseofvino.data.SearchEngineTest.correctsTyposWhenNothingMatches[jvm]
+### com.houseofvino.app.CriticalFlowsTest.misspeltSearchStillFindsTheWine[jvm]
 ```
-org.sqlite.SQLiteException: [SQLITE_CORRUPT_VTAB] Content in the virtual table is corrupt (database disk image is malformed)
-org.sqlite.SQLiteException: [SQLITE_CORRUPT_VTAB] Content in the virtual table is corrupt (database disk image is malformed)
-	at org.sqlite.core.DB.newSQLException(DB.java:1182)
-	at org.sqlite.core.DB.newSQLException(DB.java:1193)
-	at org.sqlite.core.DB.execute(DB.java:991)
-	at org.sqlite.jdbc3.JDBC3PreparedStatement.lambda$executeQuery$1(JDBC3PreparedStatement.java:93)
-	at org.sqlite.jdbc3.JDBC3Statement.withConnectionTimeout(JDBC3Statement.java:464)
-	at org.sqlite.jdbc3.JDBC3PreparedStatement.executeQuery(JDBC3PreparedStatement.java:88)
-	at app.cash.sqldelight.driver.jdbc.JdbcPreparedStatement.executeQuery(JdbcDriver.kt:288)
-	at app.cash.sqldelight.driver.jdbc.JdbcDriver.executeQuery(JdbcDriver.kt:161)
-	at com.houseofvino.data.search.SearchEngine.vocabularyNear(SearchEngine.kt:119)
-	at com.houseofvino.data.search.SearchEngine.runWithTypoFallback(SearchEngine.kt:101)
-	at com.houseofvino.data.search.SearchEngine.searchCellar(SearchEngine.kt:83)
-	at com.houseofvino.data.SearchEngineTest.cellar(SearchEngineTest.kt:46)
-	at com.houseofvino.data.SearchEngineTest.cellar$default(SearchEngineTest.kt:45)
-	at com.houseofvino.data.SearchEngineTest.correctsTyposWhenNothingMatches(SearchEngineTest.kt:68)
-	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
-	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
-	at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:59)
-	at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)
-	at org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:56)
-	at org.junit.internal.runners.statements.InvokeMethod.evaluate(InvokeMethod.java:17)
-	at org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)
-	at org.junit.runners.BlockJUnit4ClassRunner$1.evaluate(BlockJUnit4ClassRunner.java:100)
-	at org.junit.runners.ParentRunner.runLeaf(ParentRunner.java:366)
-	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:103)
+java.lang.IllegalStateException: State must be at least 'CREATED' to be moved to 'DESTROYED' in component NavBackStackEntry(d1a98b2d-751c-4294-a2dc-9d0500c94292) destination=Destination route=com.houseofvino.app.ui.navigation.SearchRoute
+java.lang.IllegalStateException: State must be at least 'CREATED' to be moved to 'DESTROYED' in component NavBackStackEntry(d1a98b2d-751c-4294-a2dc-9d0500c94292) destination=Destination route=com.houseofvino.app.ui.navigation.SearchRoute
+	at androidx.lifecycle.LifecycleRegistryKt.checkLifecycleStateTransition(LifecycleRegistry.kt:435)
+	at androidx.lifecycle.LifecycleRegistryKt.access$checkLifecycleStateTransition(LifecycleRegistry.kt:1)
+	at androidx.lifecycle.LifecycleRegistry.moveToState(LifecycleRegistry.kt:170)
+	at androidx.lifecycle.LifecycleRegistry.setCurrentState(LifecycleRegistry.kt:140)
+	at androidx.navigation.internal.NavBackStackEntryImpl.updateState$navigation_common(NavBackStackEntryImpl.kt:107)
+	at androidx.navigation.internal.NavBackStackEntryImpl.handleLifecycleEvent$navigation_common(NavBackStackEntryImpl.kt:92)
+	at androidx.navigation.NavBackStackEntry.handleLifecycleEvent(NavBackStackEntry.nonAndroid.kt:135)
+	at androidx.navigation.internal.NavControllerImpl.lifecycleObserver$lambda$0(NavControllerImpl.kt:153)
+	at androidx.lifecycle.LifecycleRegistry$ObserverWithState.dispatchEvent(LifecycleRegistry.kt:394)
+	at androidx.lifecycle.LifecycleRegistry.backwardPass$lambda$0(LifecycleRegistry.kt:329)
+	at androidx.lifecycle.FastSafeIterableMap.forEachReversed(FastSafeIterableMap.kt:159)
+	at androidx.lifecycle.LifecycleRegistry.backwardPass(LifecycleRegistry.kt:322)
+	at androidx.lifecycle.LifecycleRegistry.sync(LifecycleRegistry.kt:363)
+	at androidx.lifecycle.LifecycleRegistry.moveToState(LifecycleRegistry.kt:180)
+	at androidx.lifecycle.LifecycleRegistry.handleLifecycleEvent(LifecycleRegistry.kt:157)
+	at androidx.compose.ui.test.SkikoComposeUiTest.closeScene(ComposeUiTest.skiko.kt:345)
+	at androidx.compose.ui.test.SkikoComposeUiTest.access$closeScene(ComposeUiTest.skiko.kt:139)
+	at androidx.compose.ui.test.SkikoComposeUiTest$withScene$2.invoke(ComposeUiTest.skiko.kt:289)
+	at androidx.compose.ui.test.SkikoComposeUiTest$withScene$2.invoke(ComposeUiTest.skiko.kt:289)
+	at androidx.compose.ui.test.DesktopSynchronization_desktopKt.runOnUiThread$lambda$0(DesktopSynchronization.desktop.kt:32)
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:317)
+	at java.desktop/java.awt.event.InvocationEvent.dispatch(InvocationEvent.java:308)
+	at java.desktop/java.awt.EventQueue.dispatchEventImpl(EventQueue.java:773)
+	at java.desktop/java.awt.EventQueue$4.run(EventQueue.java:720)
+```
+
+### com.houseofvino.app.CriticalFlowsTest.searchFindsPartialWordsAndToleratesTypos[jvm]
+```
+java.lang.IllegalStateException: State must be at least 'CREATED' to be moved to 'DESTROYED' in component NavBackStackEntry(68f0e7c0-f553-4883-9c16-3b1037e75b72) destination=Destination route=com.houseofvino.app.ui.navigation.SearchRoute
+java.lang.IllegalStateException: State must be at least 'CREATED' to be moved to 'DESTROYED' in component NavBackStackEntry(68f0e7c0-f553-4883-9c16-3b1037e75b72) destination=Destination route=com.houseofvino.app.ui.navigation.SearchRoute
+	at androidx.lifecycle.LifecycleRegistryKt.checkLifecycleStateTransition(LifecycleRegistry.kt:435)
+	at androidx.lifecycle.LifecycleRegistryKt.access$checkLifecycleStateTransition(LifecycleRegistry.kt:1)
+	at androidx.lifecycle.LifecycleRegistry.moveToState(LifecycleRegistry.kt:170)
+	at androidx.lifecycle.LifecycleRegistry.setCurrentState(LifecycleRegistry.kt:140)
+	at androidx.navigation.internal.NavBackStackEntryImpl.updateState$navigation_common(NavBackStackEntryImpl.kt:107)
+	at androidx.navigation.internal.NavBackStackEntryImpl.handleLifecycleEvent$navigation_common(NavBackStackEntryImpl.kt:92)
+	at androidx.navigation.NavBackStackEntry.handleLifecycleEvent(NavBackStackEntry.nonAndroid.kt:135)
+	at androidx.navigation.internal.NavControllerImpl.lifecycleObserver$lambda$0(NavControllerImpl.kt:153)
+	at androidx.lifecycle.LifecycleRegistry$ObserverWithState.dispatchEvent(LifecycleRegistry.kt:394)
+	at androidx.lifecycle.LifecycleRegistry.backwardPass$lambda$0(LifecycleRegistry.kt:329)
+	at androidx.lifecycle.FastSafeIterableMap.forEachReversed(FastSafeIterableMap.kt:159)
+	at androidx.lifecycle.LifecycleRegistry.backwardPass(LifecycleRegistry.kt:322)
+	at androidx.lifecycle.LifecycleRegistry.sync(LifecycleRegistry.kt:363)
+	at androidx.lifecycle.LifecycleRegistry.moveToState(LifecycleRegistry.kt:180)
+	at androidx.lifecycle.LifecycleRegistry.handleLifecycleEvent(LifecycleRegistry.kt:157)
+	at androidx.compose.ui.test.SkikoComposeUiTest.closeScene(ComposeUiTest.skiko.kt:345)
+	at androidx.compose.ui.test.SkikoComposeUiTest.access$closeScene(ComposeUiTest.skiko.kt:139)
+	at androidx.compose.ui.test.SkikoComposeUiTest$withScene$2.invoke(ComposeUiTest.skiko.kt:289)
+	at androidx.compose.ui.test.SkikoComposeUiTest$withScene$2.invoke(ComposeUiTest.skiko.kt:289)
+	at androidx.compose.ui.test.DesktopSynchronization_desktopKt.runOnUiThread$lambda$0(DesktopSynchronization.desktop.kt:32)
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:317)
+	at java.desktop/java.awt.event.InvocationEvent.dispatch(InvocationEvent.java:308)
+	at java.desktop/java.awt.EventQueue.dispatchEventImpl(EventQueue.java:773)
+	at java.desktop/java.awt.EventQueue$4.run(EventQueue.java:720)
 ```
