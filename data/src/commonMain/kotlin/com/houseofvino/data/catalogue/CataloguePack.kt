@@ -32,7 +32,7 @@ object CataloguePack {
     fun build(driver: SqlDriver, rows: Sequence<Map<String, String>>, meta: Map<String, String>): Int {
         SCHEMA.forEach { driver.execute(null, it, 0) }
         var n = 0
-        driver.execute(null, "BEGIN", 0)
+        val transaction = driver.newTransaction().value
         for (r in rows) {
             fun v(k: String) = r[k]?.trim()?.takeIf { it.isNotEmpty() }
             val lwin = v("lwin")?.toLongOrNull() ?: continue
@@ -54,7 +54,7 @@ object CataloguePack {
         for ((k, value) in meta + ("wines" to n.toString())) {
             driver.execute(null, "INSERT INTO meta (key, value) VALUES (?, ?)", 2) { bindString(0, k); bindString(1, value) }
         }
-        driver.execute(null, "COMMIT", 0)
+        transaction.endTransaction(successful = true)
         driver.execute(null, "INSERT INTO wine_fts(wine_fts) VALUES ('optimize')", 0)
         driver.execute(null, "PRAGMA user_version = $FORMAT", 0)
         return n

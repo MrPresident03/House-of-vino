@@ -253,8 +253,8 @@ private fun Results(
         Field("Appellation", sg.appellation)
         Field("Region", sg.region)
         Field("Country", sg.country)
-        Field("Colour", sg.color?.let { Suggested(it.name.lowercase().replaceFirstChar(Char::uppercase), it.confidence, it.source) })
-        Field("Style", sg.style?.let { Suggested(it.name.lowercase().replaceFirstChar(Char::uppercase), it.confidence, it.source) })
+        Field("Colour", sg.color?.let { Suggested(it.value.name.lowercase().replaceFirstChar(Char::uppercase), it.confidence, it.source) })
+        Field("Style", sg.style?.let { Suggested(it.value.name.lowercase().replaceFirstChar(Char::uppercase), it.confidence, it.source) })
         if (sg.isEmpty) Text("Nothing readable yet.", style = Hv.type.bodyDense, color = Hv.colors.inkMuted, modifier = Modifier.padding(horizontal = 16.dp))
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             HvButton("Add as a new wine", { onUseDetails(vm.prefillKey(s)) }, Modifier.fillMaxWidth())

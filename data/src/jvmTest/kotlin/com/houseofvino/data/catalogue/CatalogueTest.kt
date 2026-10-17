@@ -81,7 +81,7 @@ class CatalogueTest {
     @Test fun styles_map_from_lwin_types() {
         assertEquals(WineStyle.FORTIFIED, small.byLwin(8)?.style)
         assertEquals(WineStyle.SPARKLING, small.byLwin(3)?.style)
-        assertEquals("Chateau Margaux, Premier Cru Classe", small.byLwin(4)?.displayName)
+        assertEquals("Chateau Margaux, Premier Cru Classe, Margaux", small.byLwin(4)?.displayName)
     }
 
     /** The real pack: built from the committed LWIN extract, checked against real labels. */

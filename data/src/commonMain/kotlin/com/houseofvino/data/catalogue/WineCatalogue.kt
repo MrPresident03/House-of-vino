@@ -123,8 +123,8 @@ class LwinCatalogue(private val driver: SqlDriver) : WineCatalogue {
     override val size: Int by lazy { count() }
 
     override fun match(text: String, year: Int?, limit: Int): List<CatalogueMatch> {
-        val words = TextNormalizer.tokens(text).filter { it.length >= 2 }
-        val present = words.toSet()
+        // Every word counts as evidence (“Block 3” needs the 3); only longer words are searched for.
+        val present = TextNormalizer.tokens(text).toSet()
         val queryTerms = present.filter { it !in GENERIC && !it.all(Char::isDigit) && it.length >= 3 }.sortedByDescending { it.length }.take(MAX_QUERY_TERMS)
         if (queryTerms.isEmpty()) return emptyList()
 
