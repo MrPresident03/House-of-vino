@@ -1,0 +1,130 @@
+Starting a Gradle Daemon (subsequent builds will be faster)
+Calculating task graph as no cached configuration is available for tasks: :androidApp:assembleDebug
+Type-safe project accessors is an incubating feature.
+
+> Configure project :composeApp
+WARNING: The 'commonTest' source directory exists, but android host tests are not enabled. To enable android host tests, add `withHostTest {}` to your android target configuration in the Gradle build file.
+Add android.sync.suppressAgpWarnings=GENERIC to the gradle.properties file to suppress this warning.
+
+> Configure project :core
+WARNING: The 'commonTest' source directory exists, but android host tests are not enabled. To enable android host tests, add `withHostTest {}` to your android target configuration in the Gradle build file.
+Add android.sync.suppressAgpWarnings=GENERIC to the gradle.properties file to suppress this warning.
+
+> Configure project :data
+WARNING: The 'commonTest' source directory exists, but android host tests are not enabled. To enable android host tests, add `withHostTest {}` to your android target configuration in the Gradle build file.
+Add android.sync.suppressAgpWarnings=GENERIC to the gradle.properties file to suppress this warning.
+
+> Task :data:androidPreBuild UP-TO-DATE
+> Task :composeApp:androidPreBuild UP-TO-DATE
+> Task :androidApp:preBuild UP-TO-DATE
+> Task :core:androidPreBuild UP-TO-DATE
+> Task :core:preAndroidMainBuild UP-TO-DATE
+> Task :composeApp:preAndroidMainBuild UP-TO-DATE
+> Task :data:preAndroidMainBuild UP-TO-DATE
+> Task :androidApp:preDebugBuild UP-TO-DATE
+> Task :androidApp:mergeDebugNativeDebugMetadata NO-SOURCE
+> Task :androidApp:generateDebugResources FROM-CACHE
+> Task :androidApp:generateDebugBuildConfig FROM-CACHE
+> Task :core:generateAndroidMainEmptyResourceFiles
+> Task :composeApp:generateAndroidMainEmptyResourceFiles
+> Task :composeApp:kmpPartiallyResolvedDependenciesChecker
+> Task :composeApp:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :data:generateAndroidMainEmptyResourceFiles
+> Task :composeApp:convertXmlValueResourcesForCommonMain NO-SOURCE
+> Task :composeApp:convertXmlValueResourcesForAndroidMain NO-SOURCE
+> Task :composeApp:copyNonXmlValueResourcesForAndroidMain NO-SOURCE
+> Task :composeApp:prepareComposeResourcesTaskForAndroidMain NO-SOURCE
+> Task :androidApp:packageDebugResources FROM-CACHE
+> Task :composeApp:generateResourceAccessorsForAndroidMain NO-SOURCE
+> Task :composeApp:copyNonXmlValueResourcesForCommonMain
+> Task :composeApp:prepareComposeResourcesTaskForCommonMain
+> Task :composeApp:generateExpectResourceCollectorsForCommonMain
+> Task :composeApp:generateComposeResClass
+> Task :core:kmpPartiallyResolvedDependenciesChecker
+> Task :core:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :composeApp:generateResourceAccessorsForCommonMain
+> Task :composeApp:copyAndroidMainComposeResourcesToAndroidAssets
+> Task :composeApp:generateActualResourceCollectorsForAndroidMain
+> Task :data:kmpPartiallyResolvedDependenciesChecker
+> Task :data:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :composeApp:packageAndroidMainResources FROM-CACHE
+> Task :data:generateCommonMainHouseOfVinoDatabaseInterface FROM-CACHE
+> Task :androidApp:javaPreCompileDebug FROM-CACHE
+> Task :androidApp:generateDebugAssets UP-TO-DATE
+> Task :composeApp:generateAndroidMainAssets UP-TO-DATE
+> Task :composeApp:mergeAndroidMainAssets
+> Task :androidApp:processDebugNavigationResources FROM-CACHE
+> Task :androidApp:mergeDebugAssets
+> Task :androidApp:compressDebugAssets FROM-CACHE
+> Task :androidApp:generateDebugGlobalSynthetics FROM-CACHE
+> Task :composeApp:parseAndroidMainLocalResources FROM-CACHE
+> Task :composeApp:generateAndroidMainRFile FROM-CACHE
+> Task :androidApp:desugarDebugFileDependencies FROM-CACHE
+> Task :composeApp:writeAndroidMainAarMetadata
+> Task :core:writeAndroidMainAarMetadata
+> Task :core:compileAndroidMain FROM-CACHE
+> Task :androidApp:parseDebugLocalResources FROM-CACHE
+> Task :data:writeAndroidMainAarMetadata
+> Task :androidApp:generateDebugRFile FROM-CACHE
+> Task :core:processAndroidMainJavaRes
+> Task :core:bundleAndroidMainClassesToCompileJar
+> Task :androidApp:checkDebugDuplicateClasses
+> Task :core:bundleLibRuntimeToDirAndroidMain
+> Task :androidApp:mapDebugSourceSetPaths
+> Task :androidApp:compileDebugNavigationResources FROM-CACHE
+> Task :data:compileAndroidMain FROM-CACHE
+> Task :androidApp:checkDebugAarMetadata
+> Task :data:processAndroidMainJavaRes
+> Task :data:bundleAndroidMainClassesToCompileJar
+> Task :data:bundleLibRuntimeToDirAndroidMain
+> Task :androidApp:mergeDebugResources FROM-CACHE
+> Task :androidApp:createDebugCompatibleScreenManifests
+> Task :androidApp:extractDeepLinksDebug FROM-CACHE
+> Task :composeApp:processAndroidMainManifest FROM-CACHE
+> Task :core:processAndroidMainManifest FROM-CACHE
+> Task :data:processAndroidMainManifest FROM-CACHE
+> Task :composeApp:mapAndroidMainSourceSetPaths
+> Task :composeApp:compileAndroidMainLibraryResources FROM-CACHE
+> Task :androidApp:mergeDebugJniLibFolders
+> Task :composeApp:mergeAndroidMainJniLibFolders
+> Task :composeApp:mergeAndroidMainNativeLibs NO-SOURCE
+> Task :composeApp:copyAndroidMainJniLibsProjectOnly
+> Task :core:mergeAndroidMainJniLibFolders
+> Task :core:mergeAndroidMainNativeLibs NO-SOURCE
+> Task :core:copyAndroidMainJniLibsProjectOnly
+> Task :data:mergeAndroidMainJniLibFolders
+> Task :data:mergeAndroidMainNativeLibs NO-SOURCE
+> Task :data:copyAndroidMainJniLibsProjectOnly
+> Task :androidApp:processDebugMainManifest FROM-CACHE
+> Task :androidApp:processDebugManifest FROM-CACHE
+> Task :androidApp:processDebugManifestForPackage FROM-CACHE
+> Task :composeApp:compileAndroidMain FROM-CACHE
+> Task :composeApp:bundleAndroidMainClassesToCompileJar
+> Task :androidApp:compileDebugKotlin FROM-CACHE
+> Task :androidApp:mergeDebugNativeLibs
+> Task :androidApp:processDebugJavaRes
+> Task :composeApp:processAndroidMainJavaRes
+> Task :androidApp:processDebugResources FROM-CACHE
+> Task :androidApp:mergeExtDexDebug FROM-CACHE
+> Task :composeApp:bundleLibRuntimeToDirAndroidMain
+
+> Task :androidApp:stripDebugDebugSymbols
+Unable to strip the following libraries, packaging them as they are: libandroidx.graphics.path.so, libbarhopper_v3.so, libimage_processing_util_jni.so, libmlkit_google_ocr_pipeline.so, libsurface_util_jni.so. Run with --info option to learn more.
+
+> Task :androidApp:mergeLibDexDebug FROM-CACHE
+> Task :androidApp:writeDebugAppMetadata
+> Task :androidApp:writeDebugSigningConfigVersions
+> Task :androidApp:compileDebugJavaWithJavac FROM-CACHE
+> Task :androidApp:dexBuilderDebug FROM-CACHE
+> Task :androidApp:mergeProjectDexDebug FROM-CACHE
+> Task :androidApp:validateSigningDebug
+> Task :androidApp:mergeDebugJavaResource
+> Task :androidApp:packageDebug
+> Task :androidApp:assembleDebug
+> Task :androidApp:createDebugApkListingFileRedirect
+gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/__run_2-1792265807345.json
+
+BUILD SUCCESSFUL in 13s
+82 actionable tasks: 48 executed, 34 from cache
+Configuration cache entry stored.
+https://github.com/MrPresident03/House-of-vino/releases/tag/v0.1.0
