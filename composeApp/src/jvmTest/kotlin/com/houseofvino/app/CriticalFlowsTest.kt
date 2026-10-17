@@ -35,7 +35,7 @@ class CriticalFlowsTest {
     private val timeout = 10_000L
 
     private fun ComposeUiTest.waitFor(matcher: SemanticsMatcher) =
-        waitUntil(timeout) { onAllNodes(matcher, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
+        waitUntil(timeoutMillis = timeout) { onAllNodes(matcher, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
 
     private fun ComposeUiTest.waitForText(text: String) = waitFor(hasText(text))
 
@@ -74,7 +74,7 @@ class CriticalFlowsTest {
         onNodeWithTag("tasting-notes").performTextInput("Cedar, graphite, still tight.")
         onNodeWithTag("save-tasting").performScrollTo().performClick()
 
-        waitUntil(timeout) { graph.totalBottles() == 2L }
+        waitUntil(timeoutMillis = timeout) { graph.totalBottles() == 2L }
         assertEquals(1L, graph.db.queryLong("SELECT count(*) FROM tasting"))
         // The note and the departure are linked both ways, so history survives either being edited.
         assertEquals(1L, graph.db.queryLong("SELECT count(*) FROM movement m JOIN tasting t ON t.movement_id = m.id WHERE m.kind = 'CONSUME'"))

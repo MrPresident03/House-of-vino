@@ -114,7 +114,34 @@ class SearchEngine(private val database: LocalDatabase) {
         return (queryLong("SELECT count(*) FROM search_fts WHERE search_fts MATCH ?", match) ?: 0L) > 0
     }
 
-    private fun vocabularyNear(token: String): Map<String, Int> {
+    /**
+     * Index terms of similar length, with document counts. Reads the fts4aux vocabulary table;
+     * some SQLite builds (seen with the JDBC driver) report it as corrupt, so there is a fallback
+     * that tokenises the indexed text directly. Only runs when a search found nothing.
+     */
+    private fun vocabularyNear(token: String): Map<String, Int> =
+        try {
+            vocabularyFromAux(token)
+        } catch (e: Exception) {
+            vocabularyFromContent(token)
+        }
+
+    private fun vocabularyFromContent(token: String): Map<String, Int> {
+        val budget = Fuzzy.allowedEdits(token)
+        val range = (token.length - budget)..(token.length + budget)
+        val counts = HashMap<String, Int>()
+        driver.executeQuery(null, "SELECT producer, name, vintage, place, grapes, tags, notes FROM search_fts", { c ->
+            while (c.next().value) {
+                val terms = HashSet<String>()
+                for (i in 0 until 7) c.getString(i)?.split(' ')?.forEach { t -> if (t.length in range) terms += t }
+                terms.forEach { t -> counts[t] = (counts[t] ?: 0) + 1 }
+            }
+            QueryResult.Value(Unit)
+        }, 0)
+        return counts
+    }
+
+    private fun vocabularyFromAux(token: String): Map<String, Int> {
         val budget = Fuzzy.allowedEdits(token)
         return driver.executeQuery(null,
             "SELECT term, documents FROM search_terms WHERE col = '*' AND length(term) BETWEEN ? AND ?", { c ->
