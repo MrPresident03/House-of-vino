@@ -57,5 +57,5 @@ val copyCataloguePack by tasks.registering(Copy::class) {
     from(project(":data").layout.buildDirectory.file("catalogue/lwin.db"))
     into(catalogueAssets)
 }
-android.sourceSets.getByName("main").assets.srcDir(catalogueAssets)
+android.sourceSets.getByName("main").assets.srcDir(catalogueAssets.get().asFile)
 tasks.named("preBuild") { dependsOn(copyCataloguePack) }
