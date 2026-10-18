@@ -137,7 +137,7 @@ actual fun CameraScanner(
                                             heightPermille = line.boundingBox?.let { b -> (b.height() * 1000 / height.coerceAtLeast(1)) },
                                         )
                                     }
-                                    onResult(ScanOutput.LabelText(lines, bitmap.toJpeg()))
+                                    onResult(ScanOutput.LabelText(lines, bitmap.uprighted(rotation).toJpeg()))
                                 }
                                 .addOnFailureListener { reading = false }
                         }
@@ -179,6 +179,13 @@ private fun analyse(
 private fun symbology(format: Int) = when (format) {
     Barcode.FORMAT_EAN_13 -> "EAN_13"; Barcode.FORMAT_EAN_8 -> "EAN_8"; Barcode.FORMAT_UPC_A -> "UPC_A"
     Barcode.FORMAT_UPC_E -> "UPC_E"; Barcode.FORMAT_CODE_128 -> "CODE_128"; Barcode.FORMAT_QR_CODE -> "QR"; else -> "OTHER"
+}
+
+/** The camera sensor's frame turned the way the phone was held (the saved photo has no EXIF). */
+fun Bitmap.uprighted(rotationDegrees: Int): Bitmap {
+    if (rotationDegrees % 360 == 0) return this
+    val m = android.graphics.Matrix().apply { postRotate(rotationDegrees.toFloat()) }
+    return Bitmap.createBitmap(this, 0, 0, width, height, m, true)
 }
 
 /** Downscales to at most 2048 px on the long edge and encodes as JPEG (q 85). */

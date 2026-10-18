@@ -1,5 +1,8 @@
 package com.houseofvino.app.ui.locations
 
+import com.houseofvino.app.ui.photos.PhotoImage
+import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -198,10 +201,13 @@ fun LocationDetailScreen(locationId: String, onBack: () -> Unit, onEdit: () -> U
     picking?.let { slot ->
         AlertDialog(
             onDismissRequest = { picking = null },
-            title = { Text("Row ${slot.row}, position ${slot.col}") },
+            title = { Text(slot.label ?: "Row ${slot.row}, position ${slot.col}") },
             text = {
                 Column(Modifier.verticalScroll(rememberScrollState())) {
-                    if (slot.lotId != null) Text("A bottle is placed here.", style = Hv.type.body)
+                    if (slot.lotId != null) {
+                        Text("Row ${slot.row}, position ${slot.col}", style = Hv.type.body)
+                        slot.vintageId?.let { v -> TextButton(onClick = { picking = null; onOpenVintage(v) }) { Text("Open this wine") } }
+                    }
                     else if (placeable.isEmpty()) Text("No bottles stored directly in this location. Move bottles here first.", style = Hv.type.body)
                     else placeable.distinctBy { it.first }.forEach { (lotId, label) ->
                         TextButton(onClick = { vm.place(slot.row, slot.col, lotId); picking = null }) { Text(label) }
@@ -221,6 +227,11 @@ fun LocationDetailScreen(locationId: String, onBack: () -> Unit, onEdit: () -> U
     )
 }
 
+private fun slotColor(color: String?): Color = when (color) {
+    "RED" -> Color(0xFF7A1F2B); "WHITE" -> Color(0xFFE6D89A); "ROSE" -> Color(0xFFE8A0A8); "ORANGE" -> Color(0xFFD98A3D)
+    else -> Color(0xFF8A7A6A)
+}
+
 @Composable
 private fun SlotGrid(location: Location, slots: List<SlotView>, onTap: (SlotView) -> Unit) {
     val cols = location.gridCols ?: return
@@ -229,11 +240,15 @@ private fun SlotGrid(location: Location, slots: List<SlotView>, onTap: (SlotView
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(vertical = 3.dp)) {
                 rowSlots.forEach { s ->
                     val filled = s.lotId != null
-                    Box(Modifier.size(36.dp).clip(RoundedCornerShape(18.dp))
-                        .background(if (filled) Hv.colors.accent else Hv.colors.surfaceRaised)
-                        .border(1.dp, Hv.colors.outline, RoundedCornerShape(18.dp))
+                    // Filled positions show the bottle's label photo (or its colour), so you can see what's where.
+                    Box(Modifier.size(48.dp).clip(CircleShape)
+                        .background(if (!filled) Hv.colors.surfaceRaised else slotColor(s.color))
+                        .border(if (filled) 2.dp else 1.dp, if (filled) Hv.colors.accent else Hv.colors.outline, CircleShape)
                         .clickable { onTap(s) }
-                        .semantics { contentDescription = "Row ${s.row} position ${s.col}, ${if (filled) "bottle placed" else "empty"}" })
+                        .semantics { contentDescription = "Row ${s.row} position ${s.col}, ${s.label ?: if (filled) "bottle placed" else "empty"}" },
+                        contentAlignment = Alignment.Center) {
+                        if (s.photoPath != null) PhotoImage(s.photoPath, null, Modifier.fillMaxSize())
+                    }
                 }
             }
         }

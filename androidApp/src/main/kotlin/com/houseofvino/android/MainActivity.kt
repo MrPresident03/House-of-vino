@@ -14,6 +14,8 @@ class MainActivity : ComponentActivity() {
     // platform layer calls them.
     internal val openDocument = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> hvApp.platform.onDocumentPicked(uri) }
     internal val pickMedia = registerForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri -> hvApp.platform.onPhotoPicked(uri) }
+    internal val takePicture = registerForActivityResult(ActivityResultContracts.TakePicture()) { ok -> hvApp.platform.onPhotoTaken(ok) }
+    internal val requestCamera = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted -> hvApp.platform.onCameraPermission(granted) }
     internal val requestNotifications = registerForActivityResult(ActivityResultContracts.RequestPermission()) { /* the worker checks at delivery time */ }
 
     override fun onCreate(savedInstanceState: Bundle?) {

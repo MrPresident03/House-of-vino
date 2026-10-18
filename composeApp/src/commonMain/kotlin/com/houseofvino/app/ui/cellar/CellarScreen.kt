@@ -61,6 +61,7 @@ import com.houseofvino.core.search.WindowFilter
 import com.houseofvino.data.repo.InsightsRepository
 import com.houseofvino.data.repo.SettingsRepository
 import com.houseofvino.data.search.CellarRow
+import com.houseofvino.app.ui.photos.PhotoImage
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -221,7 +222,7 @@ private fun CellarList(state: CellarState, onOpen: (String) -> Unit, vm: CellarV
         LazyVerticalGrid(GridCells.Adaptive(160.dp), state = grid, contentPadding = PaddingValues(bottom = 96.dp), modifier = Modifier.testTag("cellar-grid")) {
             item(span = { GridItemSpan(maxLineSpan) }) { CellarHeader(state, vm) }
             if (state.rows.isEmpty()) item(span = { GridItemSpan(maxLineSpan) }) { NoMatches() }
-            items(state.rows, key = { it.vintageId }) { row -> BottleTile(row, state.currentYear, onClick = { onOpen(row.vintageId) }) }
+            items(state.rows, key = { it.vintageId }) { row -> BottleTile(row, state.currentYear, onClick = { onOpen(row.vintageId) }, photo = labelPhoto(row)) }
         }
     } else {
         val list = rememberLazyListState()
@@ -230,11 +231,15 @@ private fun CellarList(state: CellarState, onOpen: (String) -> Unit, vm: CellarV
         LazyColumn(state = list, contentPadding = PaddingValues(bottom = 96.dp), modifier = Modifier.testTag("cellar-list")) {
             item { CellarHeader(state, vm) }
             if (state.rows.isEmpty()) item { NoMatches() }
-            items(state.rows, key = { it.vintageId }) { row -> LedgerRow(row, state.currentYear, onClick = { onOpen(row.vintageId) }) }
+            items(state.rows, key = { it.vintageId }) { row -> LedgerRow(row, state.currentYear, onClick = { onOpen(row.vintageId) }, photo = labelPhoto(row)) }
             if (state.loadingMore) item { LoadingRows(2) }
         }
     }
 }
+
+/** The bottle's label photo, if it has one. */
+private fun labelPhoto(row: CellarRow): (@Composable (Modifier) -> Unit)? =
+    row.photoPath?.let { path -> { m -> PhotoImage(path, "Label photo", m) } }
 
 @Composable
 private fun NoMatches() {

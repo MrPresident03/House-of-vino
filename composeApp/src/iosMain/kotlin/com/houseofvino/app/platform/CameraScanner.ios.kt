@@ -192,7 +192,8 @@ private class ScannerController(
                 val height = obs.boundingBox.useContents { size.height }
                 OcrLine(top.string, (top.confidence * 100).toInt(), (height * 1000).toInt())
             }
-            val bytes = data.toByteArray()
+            // Camera JPEGs are stored sideways with an EXIF flag; save them upright.
+            val bytes = resizedJpeg(data) ?: data.toByteArray()
             dispatch_async(dispatch_get_main_queue()) { onResult(ScanOutput.LabelText(lines, bytes)) }
         }
         request.recognitionLevel = VNRequestTextRecognitionLevelAccurate

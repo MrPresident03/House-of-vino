@@ -1,5 +1,16 @@
 package com.houseofvino.app.ui.cellar
 
+import com.houseofvino.app.ui.photos.PhotoImage
+import coil3.compose.AsyncImage
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -91,6 +102,11 @@ data class EditorState(
     val locations: List<LocationNode> = emptyList(),
     val wineSummary: String? = null,
     val savedVintageId: String? = null,
+    /** A new photo taken or chosen here (or from the scan), shown before saving. */
+    val photo: ByteArray? = null,
+    /** The label photo already saved, when editing. */
+    val photoPath: String? = null,
+    val showMore: Boolean = false,
 )
 
 class WineEditorViewModel(
@@ -114,7 +130,7 @@ class WineEditorViewModel(
     init {
         when (val prefill = graph.handoff.take<Any>(prefillKey)) {
             is WineSuggestion -> applySuggestion(prefill)
-            is ScanPrefill -> { applySuggestion(prefill.suggestion); labelPhoto = prefill.labelPhoto }
+            is ScanPrefill -> { applySuggestion(prefill.suggestion); setPhoto(prefill.labelPhoto) }
         }
         launchIo {
             val locations = io { graph.locations.tree(collectionId) }
@@ -130,8 +146,19 @@ class WineEditorViewModel(
         }
     }
 
+    fun setPhoto(bytes: ByteArray?) {
+        if (bytes == null) return
+        labelPhoto = bytes
+        _state.update { it.copy(photo = bytes) }
+    }
+
+    fun takePhoto() = graph.platform.takePhoto(::setPhoto)
+    fun choosePhoto() = graph.platform.pickPhoto(::setPhoto)
+    fun toggleMore() = _state.update { it.copy(showMore = !it.showMore) }
+
     private fun loadExisting(vintageId: String) {
         val d = graph.cellar.vintageDetail(vintageId) ?: return
+        _state.update { it.copy(photoPath = d.labelPhotoPath) }
         val w = d.wine
         val v = d.vintage
         _state.update {
@@ -171,6 +198,20 @@ class WineEditorViewModel(
             s.region?.let { f = f.copy(region = it.value); conf["region"] = it.confidence }
             s.appellation?.let { f = f.copy(appellation = it.value); conf["appellation"] = it.confidence }
             st.copy(form = f.copy(confidence = conf, barcode = s.barcode))
+        }
+    }
+
+    /**
+     * New bottles stored in a location with positions go into its first free positions, so they
+     * show in the grid straight away. Bottles that don't fit simply stay unplaced.
+     */
+    private fun placeInGrid(vintageId: String, f: WineForm) {
+        val locationId = f.locationId ?: return
+        val location = graph.locations.byId(locationId)?.takeIf { it.hasGrid } ?: return
+        val lot = graph.db.inventory.lotsForVintage(vintageId).executeAsList().lastOrNull() ?: return
+        repeat(f.quantity) {
+            val free = graph.locations.grid(location.id).firstOrNull { it.lotId == null } ?: return
+            runCatching { graph.locations.placeBottle(location.id, free.row, free.col, lot.id) }.onFailure { return }
         }
     }
 
@@ -258,6 +299,7 @@ class WineEditorViewModel(
                     graph.cellar.setLabelPhoto(vintageId, photoId)
                 }
             }
+            if (mode != EditorMode.EDIT && f.addPurchase) io { placeInGrid(vintageId, f) }
             f.barcode?.let { code ->
                 io { graph.cellar.vintage(vintageId)?.let { v -> graph.cellar.linkBarcode(collectionId, code, "EAN_13", v.wineId, vintageId, f.formatMl) } }
             }
@@ -300,52 +342,70 @@ fun WineEditorScreen(
     fun hint(key: String) = f.confidence[key]?.let { confidenceText(it) }
 
     Column(Modifier.fillMaxSize()) {
-        HvTopBar(when (state.mode) { EditorMode.EDIT -> "Edit wine"; EditorMode.NEW_VINTAGE -> "Add vintage"; EditorMode.NEW_WINE -> "Add wine" }, onBack = onBack)
+        HvTopBar(when (state.mode) { EditorMode.EDIT -> "Edit wine"; EditorMode.NEW_VINTAGE -> "Add vintage"; EditorMode.NEW_WINE -> "Add bottle" }, onBack = onBack)
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).imePadding().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            // The quick form: what you need to add a bottle. Everything else is under "More details".
+            PhotoPicker(state, vm, graph.platform.cameraAvailable())
             if (state.mode == EditorMode.NEW_VINTAGE) {
                 Text(state.wineSummary ?: "", style = Hv.type.wineName, color = Hv.colors.ink)
             } else {
-                HvTextField(f.producer, { v -> vm.edit { it.copy(producer = v) } }, "Producer", error = e["producer"], supporting = hint("producer"),
+                HvTextField(f.producer, { v -> vm.edit { it.copy(producer = v) } }, "Winery", error = e["producer"], supporting = hint("producer"),
                     modifier = Modifier.testTag("field-producer"))
-                HvTextField(f.name, { v -> vm.edit { it.copy(name = v) } }, "Wine or cuvée (optional)", supporting = hint("name") ?: "Leave blank for the producer's main wine")
+                HvTextField(f.name, { v -> vm.edit { it.copy(name = v) } }, "Wine (optional)", supporting = hint("name"), placeholder = "e.g. Pinot Noir, Reserve")
             }
             VintageInput(f.vintageKind, f.year, { k -> vm.edit { it.copy(vintageKind = k) } }, { y -> vm.edit { it.copy(year = y) } }, e["year"], f.confidence["vintage"])
-
             if (state.mode != EditorMode.NEW_VINTAGE) {
-                Text("Colour", style = Hv.type.label, color = Hv.colors.inkMuted)
                 ChoiceChips(WineColor.entries, setOfNotNull(f.color), { it.name.lowercase().replaceFirstChar(Char::uppercase).replace("Rose", "Rosé") },
                     { c -> vm.edit { it.copy(color = if (it.color == c) null else c) } })
-                Text("Style", style = Hv.type.label, color = Hv.colors.inkMuted)
-                ChoiceChips(WineStyle.entries, setOfNotNull(f.style), { it.name.lowercase().replaceFirstChar(Char::uppercase) },
-                    { s -> vm.edit { it.copy(style = if (it.style == s) null else s) } })
-                HvTextField(f.country, { v -> vm.edit { it.copy(country = v) } }, "Country", supporting = hint("country"))
-                HvTextField(f.region, { v -> vm.edit { it.copy(region = v) } }, "Region", supporting = hint("region"))
-                HvTextField(f.appellation, { v -> vm.edit { it.copy(appellation = v) } }, "Appellation", supporting = hint("appellation"))
-                HvTextField(f.subRegion, { v -> vm.edit { it.copy(subRegion = v) } }, "Sub-region or vineyard")
-                HvTextField(f.classification, { v -> vm.edit { it.copy(classification = v) } }, "Classification", placeholder = "e.g. Premier Grand Cru Classé")
-                HvTextField(f.grapes, { v -> vm.edit { it.copy(grapes = v) } }, "Grapes", error = e["grapes"], placeholder = "Merlot 60%, Cabernet Franc 40%")
             }
-
-            SectionHeader("Drinking window", Modifier.padding(start = 0.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                HvTextField(f.drinkFrom, { v -> vm.edit { it.copy(drinkFrom = v.filter(Char::isDigit).take(4)) } }, "From", Modifier.weight(1f), error = e["drinkFrom"], keyboard = KeyboardType.Number)
-                HvTextField(f.drinkUntil, { v -> vm.edit { it.copy(drinkUntil = v.filter(Char::isDigit).take(4)) } }, "Until", Modifier.weight(1f), error = e["drinkUntil"], keyboard = KeyboardType.Number)
-            }
-            HvTextField(f.windowSource, { v -> vm.edit { it.copy(windowSource = v) } }, "Window source", placeholder = "e.g. My estimate, producer, critic")
-            HvTextField(f.abv, { v -> vm.edit { it.copy(abv = v) } }, "Alcohol %", error = e["abv"], supporting = hint("abv"), keyboard = KeyboardType.Decimal)
-            HvTextField(f.tags, { v -> vm.edit { it.copy(tags = v) } }, "Tags", placeholder = "Separate with commas")
-            if (state.mode != EditorMode.NEW_VINTAGE) {
-                HvTextField(f.notes, { v -> vm.edit { it.copy(notes = v) } }, "Notes", singleLine = false, minLines = 2)
-            }
-
             if (state.mode != EditorMode.EDIT) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Add bottles now", style = Hv.type.sectionTitle, color = Hv.colors.ink, modifier = Modifier.weight(1f))
-                    Switch(f.addPurchase, { on -> vm.edit { it.copy(addPurchase = on) } })
+                QuantityStepper(f.quantity, { q -> vm.edit { it.copy(quantity = q, addPurchase = true) } }, "Bottles", min = 1)
+                e["quantity"]?.let { Text(it, color = Hv.colors.danger, style = Hv.type.caption) }
+                LocationDropdown(state.locations, f.locationId, { id -> vm.edit { it.copy(locationId = id) } }, label = "Where")
+                if (state.locations.firstOrNull { it.location.id == f.locationId }?.location?.hasGrid == true) {
+                    Text("Bottles go into the first free positions in its grid.", style = Hv.type.caption, color = Hv.colors.inkMuted)
                 }
-                if (f.addPurchase) PurchaseFields(f, e, state.locations) { t -> vm.edit(t) }
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    HvTextField(f.price, { v -> vm.edit { it.copy(price = v) } }, "Price per bottle (optional)", Modifier.weight(1.4f), error = e["price"], keyboard = KeyboardType.Decimal)
+                    CurrencyDropdown(f.currency, { c -> vm.edit { it.copy(currency = c) } }, Modifier.weight(1f))
+                }
             }
-            HvButton(if (state.saving) "Saving…" else "Save", { vm.save() }, Modifier.fillMaxWidth().padding(vertical = 16.dp).testTag("save-wine"), enabled = !state.saving)
+
+            HvButton(if (state.saving) "Saving…" else "Save", { vm.save() }, Modifier.fillMaxWidth().padding(top = 4.dp).testTag("save-wine"), enabled = !state.saving)
+            TextButton(onClick = vm::toggleMore, modifier = Modifier.fillMaxWidth().testTag("more-details")) {
+                Text(if (state.showMore) "Fewer details" else "More details (region, grapes, drinking window, notes…)")
+            }
+
+            if (state.showMore) {
+                if (state.mode != EditorMode.NEW_VINTAGE) {
+                    Text("Style", style = Hv.type.label, color = Hv.colors.inkMuted)
+                    ChoiceChips(WineStyle.entries, setOfNotNull(f.style), { it.name.lowercase().replaceFirstChar(Char::uppercase) },
+                        { st -> vm.edit { it.copy(style = if (it.style == st) null else st) } })
+                    HvTextField(f.country, { v -> vm.edit { it.copy(country = v) } }, "Country", supporting = hint("country"))
+                    HvTextField(f.region, { v -> vm.edit { it.copy(region = v) } }, "Region", supporting = hint("region"))
+                    HvTextField(f.appellation, { v -> vm.edit { it.copy(appellation = v) } }, "Appellation", supporting = hint("appellation"))
+                    HvTextField(f.subRegion, { v -> vm.edit { it.copy(subRegion = v) } }, "Sub-region or vineyard")
+                    HvTextField(f.classification, { v -> vm.edit { it.copy(classification = v) } }, "Classification", placeholder = "e.g. Premier Grand Cru Classé")
+                    HvTextField(f.grapes, { v -> vm.edit { it.copy(grapes = v) } }, "Grapes", error = e["grapes"], placeholder = "Merlot 60%, Cabernet Franc 40%")
+                }
+                SectionHeader("Drinking window", Modifier.padding(start = 0.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    HvTextField(f.drinkFrom, { v -> vm.edit { it.copy(drinkFrom = v.filter(Char::isDigit).take(4)) } }, "From", Modifier.weight(1f), error = e["drinkFrom"], keyboard = KeyboardType.Number)
+                    HvTextField(f.drinkUntil, { v -> vm.edit { it.copy(drinkUntil = v.filter(Char::isDigit).take(4)) } }, "Until", Modifier.weight(1f), error = e["drinkUntil"], keyboard = KeyboardType.Number)
+                }
+                HvTextField(f.windowSource, { v -> vm.edit { it.copy(windowSource = v) } }, "Window source", placeholder = "e.g. My estimate, producer, critic")
+                HvTextField(f.abv, { v -> vm.edit { it.copy(abv = v) } }, "Alcohol %", error = e["abv"], supporting = hint("abv"), keyboard = KeyboardType.Decimal)
+                HvTextField(f.tags, { v -> vm.edit { it.copy(tags = v) } }, "Tags", placeholder = "Separate with commas")
+                if (state.mode != EditorMode.NEW_VINTAGE) {
+                    HvTextField(f.notes, { v -> vm.edit { it.copy(notes = v) } }, "Notes", singleLine = false, minLines = 2)
+                }
+                if (state.mode != EditorMode.EDIT) {
+                    FormatPicker(f.formatMl) { ml -> vm.edit { it.copy(formatMl = ml) } }
+                    DateField("Purchase date", f.acquiredOn, { v -> vm.edit { it.copy(acquiredOn = v) } }, e["acquiredOn"])
+                    HvTextField(f.source, { v -> vm.edit { it.copy(source = v) } }, "Bought from", placeholder = "Merchant, auction, winery…")
+                }
+                Spacer(Modifier.height(24.dp))
+            }
         }
     }
 
@@ -366,6 +426,24 @@ fun WineEditorScreen(
             confirmButton = { TextButton(onClick = { vm.dismissDuplicate(); onSaved(clash) }) { Text("Open it") } },
             dismissButton = { TextButton(onClick = vm::dismissDuplicate) { Text("Change year") } },
         )
+    }
+}
+
+@Composable
+private fun PhotoPicker(state: EditorState, vm: WineEditorViewModel, camera: Boolean) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Box(Modifier.size(72.dp, 96.dp).clip(RoundedCornerShape(6.dp)).background(Hv.colors.surfaceRaised)
+            .clickable { if (camera) vm.takePhoto() else vm.choosePhoto() }, contentAlignment = Alignment.Center) {
+            when {
+                state.photo != null -> AsyncImage(model = state.photo, contentDescription = "Label photo", modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+                state.photoPath != null -> PhotoImage(state.photoPath, "Label photo", Modifier.fillMaxSize())
+                else -> Text("Photo", style = Hv.type.caption, color = Hv.colors.inkMuted)
+            }
+        }
+        Column {
+            if (camera) TextButton(onClick = vm::takePhoto) { Text("Take photo") }
+            TextButton(onClick = vm::choosePhoto) { Text("Choose photo") }
+        }
     }
 }
 

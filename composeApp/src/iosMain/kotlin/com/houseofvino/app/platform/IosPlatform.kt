@@ -54,6 +54,11 @@ import platform.UIKit.UIDocumentPickerViewController
 import platform.UIKit.UIGraphicsImageRenderer
 import platform.UIKit.UIImage
 import platform.UIKit.UIImageJPEGRepresentation
+import platform.UIKit.UIImagePickerController
+import platform.UIKit.UIImagePickerControllerDelegateProtocol
+import platform.UIKit.UIImagePickerControllerOriginalImage
+import platform.UIKit.UIImagePickerControllerSourceType
+import platform.UIKit.UINavigationControllerDelegateProtocol
 import platform.UIKit.UIViewController
 import platform.UniformTypeIdentifiers.UTTypeCommaSeparatedText
 import platform.UniformTypeIdentifiers.UTTypeImage
@@ -152,6 +157,24 @@ class IosPlatform : PlatformServices {
         topViewController()?.presentViewController(picker, animated = true, completion = null)
     }
 
+    private var cameraDelegate: CameraPickerDelegate? = null
+
+    override fun cameraAvailable(): Boolean =
+        UIImagePickerController.isSourceTypeAvailable(UIImagePickerControllerSourceType.UIImagePickerControllerSourceTypeCamera)
+
+    override fun takePhoto(onTaken: (ByteArray?) -> Unit) {
+        if (!cameraAvailable()) return onTaken(null)
+        val picker = UIImagePickerController()
+        picker.sourceType = UIImagePickerControllerSourceType.UIImagePickerControllerSourceTypeCamera
+        val delegate = CameraPickerDelegate { data ->
+            cameraDelegate = null
+            onTaken(data?.let { resizedJpeg(it) })
+        }
+        cameraDelegate = delegate
+        picker.delegate = delegate
+        topViewController()?.presentViewController(picker, animated = true, completion = null) ?: onTaken(null)
+    }
+
     override fun openUrl(url: String) {
         NSURL.URLWithString(url)?.let { UIApplication.sharedApplication.openURL(it, options = emptyMap<Any?, Any?>(), completionHandler = null) }
     }
@@ -222,14 +245,29 @@ private class PhotoPickerDelegate(private val onData: (NSData?) -> Unit) : NSObj
     }
 }
 
+private class CameraPickerDelegate(private val onData: (NSData?) -> Unit) : NSObject(),
+    UIImagePickerControllerDelegateProtocol, UINavigationControllerDelegateProtocol {
+    override fun imagePickerController(picker: UIImagePickerController, didFinishPickingMediaWithInfo: Map<Any?, *>) {
+        picker.dismissViewControllerAnimated(true, completion = null)
+        val image = didFinishPickingMediaWithInfo[UIImagePickerControllerOriginalImage] as? UIImage
+        onData(image?.let { UIImageJPEGRepresentation(it, 0.9) })
+    }
+
+    override fun imagePickerControllerDidCancel(picker: UIImagePickerController) {
+        picker.dismissViewControllerAnimated(true, completion = null)
+        onData(null)
+    }
+}
+
 @OptIn(ExperimentalForeignApi::class)
-private fun resizedJpeg(data: NSData, maxEdge: Double = 2048.0): ByteArray? {
+internal fun resizedJpeg(data: NSData, maxEdge: Double = 2048.0): ByteArray? {
     val image = UIImage(data = data)
     val (w, h) = image.size.useContents { width to height }
     if (w <= 0.0 || h <= 0.0) return null
     val scale = minOf(1.0, maxEdge / maxOf(w, h))
     val tw = w * scale
     val th = h * scale
+    // Drawing applies the photo's EXIF orientation, so the JPEG written out is upright.
     val renderer = UIGraphicsImageRenderer(size = CGSizeMake(tw, th))
     val resized = renderer.imageWithActions { _ -> image.drawInRect(CGRectMake(0.0, 0.0, tw, th)) }
     return UIImageJPEGRepresentation(resized, 0.85)?.toByteArray()

@@ -2,4 +2,6 @@
 <paths>
     <!-- Only the exports cache directory is shareable. Photos and the database are never exposed. -->
     <cache-path name="exports" path="exports/" />
+    <!-- The camera app writes one photo here; it is read, made upright and deleted straight away. -->
+    <cache-path name="camera" path="camera/" />
 </paths>

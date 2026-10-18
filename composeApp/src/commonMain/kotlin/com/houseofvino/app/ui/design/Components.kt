@@ -119,7 +119,7 @@ fun SectionHeader(text: String, modifier: Modifier = Modifier, trailing: @Compos
 // Ledger row: the signature list item
 
 @Composable
-fun LedgerRow(row: CellarRow, currentYear: Int, onClick: () -> Unit, modifier: Modifier = Modifier) {
+fun LedgerRow(row: CellarRow, currentYear: Int, onClick: () -> Unit, modifier: Modifier = Modifier, photo: @Composable ((Modifier) -> Unit)? = null) {
     val status = DrinkingWindow.status(row.drinkFrom, row.drinkUntil, currentYear)
     val name = listOfNotNull(row.producer, row.wineName).joinToString(" ")
     val spoken = buildString {
@@ -131,6 +131,10 @@ fun LedgerRow(row: CellarRow, currentYear: Int, onClick: () -> Unit, modifier: M
     Column(modifier.fillMaxWidth().clickable(onClickLabel = "Open details", role = Role.Button, onClick = onClick)
         .semantics(mergeDescendants = true) { contentDescription = spoken }) {
         Row(Modifier.fillMaxWidth().heightIn(min = 72.dp).padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+            if (photo != null) {
+                photo(Modifier.size(44.dp, 58.dp).clip(RoundedCornerShape(4.dp)))
+                Spacer(Modifier.width(12.dp))
+            }
             Text(vintageLabel(row.vintage), style = Hv.type.vintageRow, color = Hv.colors.ink, modifier = Modifier.width(64.dp), maxLines = 1)
             Column(Modifier.weight(1f).padding(end = 12.dp)) {
                 Text(row.producer, style = Hv.type.label, color = Hv.colors.inkMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)

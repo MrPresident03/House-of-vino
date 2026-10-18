@@ -43,6 +43,10 @@ interface PlatformServices {
     /** Lets the user choose a photo from the library; JPEG bytes or null. */
     fun pickPhoto(onPicked: (ByteArray?) -> Unit)
 
+    /** Takes a photo with the camera, upright; JPEG bytes or null if cancelled or unavailable. */
+    fun takePhoto(onTaken: (ByteArray?) -> Unit) = onTaken(null)
+    fun cameraAvailable(): Boolean = false
+
     fun openUrl(url: String)
     fun openAppSettings()
 

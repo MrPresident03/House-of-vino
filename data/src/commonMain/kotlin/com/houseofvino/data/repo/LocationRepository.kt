@@ -19,7 +19,11 @@ data class LocationInput(
 
 data class LocationNode(val location: Location, val depth: Int, val bottlesHere: Int, val bottlesTotal: Int, val childCount: Int)
 
-data class SlotView(val slotId: String?, val row: Int, val col: Int, val lotId: String?)
+data class SlotView(
+    val slotId: String?, val row: Int, val col: Int, val lotId: String?,
+    /** The bottle in this position: its vintage, a short name, colour and label photo, for the grid. */
+    val vintageId: String? = null, val label: String? = null, val color: String? = null, val photoPath: String? = null,
+)
 
 class LocationInUseException(message: String) : IllegalStateException(message)
 
@@ -103,9 +107,39 @@ class LocationRepository(private val database: LocalDatabase) {
         val loc = byId(locationId) ?: return emptyList()
         if (!loc.hasGrid) return emptyList()
         val slots = inventory.slotsForLocation(locationId).executeAsList().associateBy { it.slot_row.toInt() to it.slot_col.toInt() }
+        val bottles = bottlesForLots(slots.values.mapNotNull { it.lot_id }.distinct())
         return (1..loc.gridRows!!).flatMap { r ->
-            (1..loc.gridCols!!).map { c -> slots[r to c].let { SlotView(it?.id, r, c, it?.lot_id) } }
+            (1..loc.gridCols!!).map { c ->
+                slots[r to c].let { s ->
+                    val b = s?.lot_id?.let(bottles::get)
+                    SlotView(s?.id, r, c, s?.lot_id, b?.vintageId, b?.label, b?.color, b?.photoPath)
+                }
+            }
         }
+    }
+
+    private class SlotBottle(val vintageId: String, val label: String, val color: String?, val photoPath: String?)
+
+    private fun bottlesForLots(lotIds: List<String>): Map<String, SlotBottle> {
+        if (lotIds.isEmpty()) return emptyMap()
+        val out = HashMap<String, SlotBottle>()
+        for (chunk in lotIds.chunked(200)) {
+            val sql = """
+                SELECT l.id, v.id, w.producer, w.name, v.vintage_kind, v.year, w.color,
+                       (SELECT p.local_path FROM photo p WHERE p.id = v.label_photo_id AND p.deleted_at IS NULL)
+                FROM lot l JOIN vintage v ON v.id = l.vintage_id JOIN wine w ON w.id = v.wine_id
+                WHERE l.id IN (${chunk.joinToString(",") { "?" }})
+            """.trimIndent()
+            database.driver.executeQuery(null, sql, { c ->
+                while (c.next().value) {
+                    val year = when (c.getString(4)) { "YEAR" -> c.getLong(5)?.toString(); "NV" -> "NV"; else -> null }
+                    val label = listOfNotNull(year, c.getString(2), c.getString(3)).joinToString(" ")
+                    out[c.getString(0)!!] = SlotBottle(c.getString(1)!!, label, c.getString(6), c.getString(7))
+                }
+                app.cash.sqldelight.db.QueryResult.Unit
+            }, chunk.size) { chunk.forEachIndexed { i, id -> bindString(i, id) } }
+        }
+        return out
     }
 
     /**

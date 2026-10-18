@@ -148,9 +148,44 @@ class AndroidPlatform(private val app: Application) : PlatformServices {
         }
     }
 
+    private var pendingShot: ((ByteArray?) -> Unit)? = null
+    private val shotFile: File get() = File(app.cacheDir, "camera").apply { mkdirs() }.resolve("shot.jpg")
+
+    override fun cameraAvailable(): Boolean = scanningAvailable()
+
+    override fun takePhoto(onTaken: (ByteArray?) -> Unit) {
+        val host = activity ?: return onTaken(null)
+        pendingShot = onTaken
+        // The app declares CAMERA (for the scanner), so the camera app can only be used once it's granted.
+        if (ContextCompat.checkSelfPermission(app, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) launchCamera()
+        else host.requestCamera.launch(Manifest.permission.CAMERA)
+    }
+
+    internal fun onCameraPermission(granted: Boolean) {
+        if (granted) launchCamera() else pendingShot?.also { pendingShot = null }?.invoke(null)
+    }
+
+    private fun launchCamera() {
+        val host = activity ?: return pendingShot?.also { pendingShot = null }?.invoke(null) ?: Unit
+        shotFile.delete()
+        val uri = FileProvider.getUriForFile(app, "${app.packageName}.exports", shotFile)
+        try { host.takePicture.launch(uri) } catch (_: ActivityNotFoundException) { pendingShot?.also { pendingShot = null }?.invoke(null) }
+    }
+
+    internal fun onPhotoTaken(ok: Boolean) {
+        val callback = pendingShot ?: return
+        pendingShot = null
+        val file = shotFile
+        if (!ok || !file.isFile) return callback(null)
+        scope.launch {
+            callback(withContext(Dispatchers.IO) { runCatching { decodeResized(ImageDecoder.createSource(file)) }.getOrNull().also { file.delete() } })
+        }
+    }
+
+    private fun decodeResized(uri: Uri): ByteArray = decodeResized(ImageDecoder.createSource(app.contentResolver, uri))
+
     /** Decodes at most [MAX_EDGE] px on the long edge (EXIF orientation applied) and re-encodes as JPEG. */
-    private fun decodeResized(uri: Uri): ByteArray {
-        val source = ImageDecoder.createSource(app.contentResolver, uri)
+    private fun decodeResized(source: ImageDecoder.Source): ByteArray {
         val bitmap = ImageDecoder.decodeBitmap(source) { decoder, info, _ ->
             val w = info.size.width
             val h = info.size.height
