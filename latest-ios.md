@@ -1,7 +1,7 @@
 # ios: success
 
-- commit: 4ce39fcf0bd2af6bf0e75840d2549e50170ccbaa
-- run: https://github.com/MrPresident03/House-of-vino/actions/runs/39067472524
+- commit: 306e05a58eb7a692e77eeed250b608762b7fc982
+- run: https://github.com/MrPresident03/House-of-vino/actions/runs/39102454732
 - tests: 151 run, 0 failed, 0 skipped
 
 ## Tests per class
