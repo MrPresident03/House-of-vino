@@ -1,43 +1,18 @@
-# jvm-android: failure
+# jvm-android: success
 
-- commit: 93d1f311bb2059fc88d6bc9b1d9bb70b1ae5fdf1
-- run: https://github.com/MrPresident03/House-of-vino/actions/runs/39102219523
-- tests: 159 run, 0 failed, 0 skipped
-
-## Compiler errors (2)
-```
-e: file:///home/runner/work/House-of-vino/House-of-vino/composeApp/src/commonMain/kotlin/com/houseofvino/app/ui/locations/LocationScreens.kt:250:61 Smart cast to 'String' is impossible, because 'photoPath' is a public API property declared in different module.
-e: file:///home/runner/work/House-of-vino/House-of-vino/composeApp/src/commonMain/kotlin/com/houseofvino/app/ui/locations/LocationScreens.kt:250:61 Smart cast to 'String' is impossible, because 'photoPath' is a public API property declared in different module.
-```
-
-## Gradle failures
-```
-* What went wrong:
-Execution failed for task ':composeApp:compileKotlinJvm' (registered in build file 'composeApp/build.gradle.kts').
-> A failure occurred while executing org.jetbrains.kotlin.compilerRunner.btapi.BuildToolsApiCompilationWork
-   > Kotlin compiler: SMARTCAST_IMPOSSIBLE
-       Kotlin compiler error
-         Smart cast to 'String' is impossible, because 'photoPath' is a public API property declared in different module.
-         Location: /home/runner/work/House-of-vino/House-of-vino/composeApp/src/commonMain/kotlin/com/houseofvino/app/ui/locations/LocationScreens.kt line 250
-
----
-* What went wrong:
-Execution failed for task ':composeApp:compileAndroidMain' (registered by plugin 'com.android.internal.kotlin.multiplatform.library').
-> A failure occurred while executing org.jetbrains.kotlin.compilerRunner.btapi.BuildToolsApiCompilationWork
-   > Kotlin compiler: SMARTCAST_IMPOSSIBLE
-       Kotlin compiler error
-         Smart cast to 'String' is impossible, because 'photoPath' is a public API property declared in different module.
-         Location: /home/runner/work/House-of-vino/House-of-vino/composeApp/src/commonMain/kotlin/com/houseofvino/app/ui/locations/LocationScreens.kt line 250
-
-```
+- commit: e536acf413d92e4a03d0e5fc2ad0a2eebd8c349b
+- run: https://github.com/MrPresident03/House-of-vino/actions/runs/39102332854
+- tests: 170 run, 0 failed, 0 skipped
 
 ## Tests per class
 - Base64Test: 4
 - CandidateMatcherTest: 4
 - CatalogueTest: 8
 - CellarRepositoryTest: 8
+- CriticalFlowsTest: 4
 - CryptoTest: 10
 - CsvTest: 4
+- DesignTokensTest: 5
 - DuplicateDetectorTest: 2
 - ExchangeRateTest: 7
 - FieldMergeTest: 7
@@ -57,4 +32,5 @@ Execution failed for task ':composeApp:compileAndroidMain' (registered by plugin
 - QueryParserTest: 3
 - SchemaTest: 5
 - SearchEngineTest: 8
+- SharingFlowTest: 2
 - TextNormalizerTest: 2
