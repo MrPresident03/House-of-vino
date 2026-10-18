@@ -247,7 +247,7 @@ private fun SlotGrid(location: Location, slots: List<SlotView>, onTap: (SlotView
                         .clickable { onTap(s) }
                         .semantics { contentDescription = "Row ${s.row} position ${s.col}, ${s.label ?: if (filled) "bottle placed" else "empty"}" },
                         contentAlignment = Alignment.Center) {
-                        if (s.photoPath != null) PhotoImage(s.photoPath, null, Modifier.fillMaxSize())
+                        s.photoPath?.let { PhotoImage(it, null, Modifier.fillMaxSize()) }
                     }
                 }
             }
