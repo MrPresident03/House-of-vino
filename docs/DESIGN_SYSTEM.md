@@ -45,10 +45,10 @@ Every text/background pair meets WCAG AA: 4.5:1 for body text, 3:1 for large tex
 - **IBM Plex Sans** (OFL) is used for all controls, body text and metadata. Instances: 400, 500, 600.
   Numbers use tabular figures (`tnum`) so quantities and prices align in columns.
 
-The pairing above is **Classic**. Settings › Preferences offers four more (`FontChoice`):
-**Editorial** (Playfair Display headings), **Garamond** (Cormorant Garamond headings, set 12 % larger
-because of its small x-height), **Modern** (IBM Plex Sans throughout) and **Device** (the phone's own
-font). Body text stays IBM Plex Sans in all but Device. Only the chosen pairing is loaded. Playfair
+The pairing above is **Classic**. Since 0.4 the default is **Modern** (IBM Plex Sans throughout).
+Settings › Preferences also offers **Classic**, **Editorial** (Playfair Display headings),
+**Garamond** (Cormorant Garamond headings, set 12 % larger because of its small x-height) and
+**Device** (the phone's own font). Body text stays IBM Plex Sans in all but Device. Only the chosen pairing is loaded. Playfair
 Display is shipped unmodified (reserved font name); the Cormorant files are subset to Latin.
 
 | Role | Face | Size / line | Notes |
