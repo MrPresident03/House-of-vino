@@ -44,10 +44,10 @@ class DesignTokensTest {
 
     @Test fun everyThemeHasItsOwnName() {
         assertEquals(ThemeStyle.entries.size * 2, themes.size)
-        assertEquals(ThemeStyle.CLARET, ThemeStyle.of(null))
-        assertEquals(ThemeStyle.CLARET, ThemeStyle.of("NOT_A_THEME"))
-        assertEquals(ThemeStyle.SLATE, ThemeStyle.of("SLATE"))
-        assertEquals(FontChoice.CLASSIC, FontChoice.of("nope"))
+        assertEquals(ThemeStyle.BOLD, ThemeStyle.of(null))
+        assertEquals(ThemeStyle.BOLD, ThemeStyle.of("CLARET")) // retired in 0.4
+        assertEquals(ThemeStyle.VIVID, ThemeStyle.of("VIVID"))
+        assertEquals(FontChoice.MODERN, FontChoice.of("nope"))
     }
 
     @Test fun accentReadsOnRaisedSurfacesAndItsContainer() = themes.forEach { (theme, p) ->

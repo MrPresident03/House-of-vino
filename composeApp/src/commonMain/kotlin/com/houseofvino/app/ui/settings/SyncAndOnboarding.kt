@@ -133,7 +133,7 @@ private fun ConflictItem(c: ConflictView, vm: ConflictsViewModel, onOpenVintage:
 fun FirstRunScreen(onDone: () -> Unit, onJoin: () -> Unit) {
     val graph = appGraph()
     var currency by remember { mutableStateOf(graph.settings.preferences().currency) }
-    var theme by remember { mutableStateOf(ThemePreference.SYSTEM) }
+    var theme by remember { mutableStateOf(ThemePreference.DARK) }
     fun finish(then: () -> Unit) {
         graph.scope.launch {
             graph.settings.put(SettingsRepository.KEY_CURRENCY, currency.code)

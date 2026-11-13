@@ -53,6 +53,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -128,11 +129,15 @@ fun LedgerRow(row: CellarRow, currentYear: Int, onClick: () -> Unit, modifier: M
         append(", ").append(row.quantity).append(if (row.quantity == 1) " bottle" else " bottles")
         if (status != WindowFilter.UNKNOWN) append(", ").append(DrinkingWindow.label(status).lowercase())
     }
-    Column(modifier.fillMaxWidth().clickable(onClickLabel = "Open details", role = Role.Button, onClick = onClick)
+    Column(modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp).clip(RoundedCornerShape(16.dp))
+        .background(Hv.colors.surface).clickable(onClickLabel = "Open details", role = Role.Button, onClick = onClick)
         .semantics(mergeDescendants = true) { contentDescription = spoken }) {
-        Row(Modifier.fillMaxWidth().heightIn(min = 72.dp).padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth().heightIn(min = 72.dp).padding(start = 10.dp, end = 16.dp, top = 10.dp, bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+            // Wine colour at a glance (red, white, rosé, orange).
+            Box(Modifier.size(5.dp, 48.dp).clip(RoundedCornerShape(3.dp)).background(Color(wineColorArgb(row.color))))
+            Spacer(Modifier.width(12.dp))
             if (photo != null) {
-                photo(Modifier.size(44.dp, 58.dp).clip(RoundedCornerShape(4.dp)))
+                photo(Modifier.size(44.dp, 58.dp).clip(RoundedCornerShape(10.dp)))
                 Spacer(Modifier.width(12.dp))
             }
             Text(vintageLabel(row.vintage), style = Hv.type.vintageRow, color = Hv.colors.ink, modifier = Modifier.width(64.dp), maxLines = 1)
@@ -154,7 +159,6 @@ fun LedgerRow(row: CellarRow, currentYear: Int, onClick: () -> Unit, modifier: M
             }
             QuantityFigure(row.quantity)
         }
-        HorizontalDivider(Modifier.padding(start = 80.dp), color = Hv.colors.outline, thickness = 1.dp)
     }
 }
 
@@ -195,10 +199,11 @@ fun WindowStatusPill(status: WindowFilter, modifier: Modifier = Modifier) {
         WindowFilter.PAST -> c.past
         WindowFilter.UNKNOWN -> c.inkMuted
     }
-    Row(modifier, verticalAlignment = Alignment.CenterVertically) {
+    Row(modifier.clip(RoundedCornerShape(50)).background(color.copy(alpha = 0.12f)).padding(horizontal = 8.dp, vertical = 2.dp),
+        verticalAlignment = Alignment.CenterVertically) {
         Box(Modifier.size(6.dp).clip(RoundedCornerShape(3.dp)).background(color))
-        Spacer(Modifier.width(4.dp))
-        Text(DrinkingWindow.label(status), style = Hv.type.caption, color = color)
+        Spacer(Modifier.width(5.dp))
+        Text(DrinkingWindow.label(status), style = Hv.type.caption.copy(fontWeight = FontWeight.Medium), color = color)
     }
 }
 
@@ -253,7 +258,7 @@ fun BottleTile(row: CellarRow, currentYear: Int, onClick: () -> Unit, modifier: 
     Column(modifier.clickable(onClick = onClick).semantics(mergeDescendants = true) {
         contentDescription = "${vintageLabel(row.vintage)} ${row.producer} ${row.wineName ?: ""}, ${row.quantity} bottles"
     }.padding(8.dp)) {
-        Box(Modifier.fillMaxWidth().aspectRatio(3f / 4f).clip(RoundedCornerShape(6.dp)).background(Hv.colors.surfaceRaised), contentAlignment = Alignment.Center) {
+        Box(Modifier.fillMaxWidth().aspectRatio(3f / 4f).clip(RoundedCornerShape(16.dp)).background(Hv.colors.surfaceRaised), contentAlignment = Alignment.Center) {
             if (photo != null) photo(Modifier.fillMaxSize()) else BottleSilhouette(row.color, Modifier.fillMaxSize().padding(12.dp))
             Box(Modifier.align(Alignment.TopEnd).padding(6.dp).clip(RoundedCornerShape(6.dp)).background(Hv.colors.accentContainer).padding(horizontal = 8.dp, vertical = 2.dp)) {
                 Text(row.quantity.toString(), style = Hv.type.label, color = Hv.colors.onAccentContainer)
@@ -292,14 +297,14 @@ fun HvButton(
         if (icon != null) { Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp)); Spacer(Modifier.width(8.dp)) }
         Text(text, style = Hv.type.label)
     }
-    val shape = RoundedCornerShape(6.dp)
+    val shape = RoundedCornerShape(14.dp)
     val minH = Modifier.heightIn(min = 48.dp)
     when (kind) {
         ButtonKind.PRIMARY -> Button(onClick, modifier.then(minH), enabled, shape = shape, content = content)
         ButtonKind.DESTRUCTIVE -> Button(onClick, modifier.then(minH), enabled, shape = shape,
             colors = ButtonDefaults.buttonColors(containerColor = Hv.colors.danger, contentColor = Hv.colors.bg), content = content)
-        ButtonKind.SECONDARY -> OutlinedButton(onClick, modifier.then(minH), enabled, shape = shape,
-            border = BorderStroke(1.dp, Hv.colors.inkMuted), content = content)
+        ButtonKind.SECONDARY -> Button(onClick, modifier.then(minH), enabled, shape = shape,
+            colors = ButtonDefaults.buttonColors(containerColor = Hv.colors.surfaceRaised, contentColor = Hv.colors.ink), content = content)
         ButtonKind.QUIET -> TextButton(onClick, modifier.then(minH), enabled, shape = shape, content = content)
     }
 }
@@ -337,11 +342,12 @@ fun HvTextField(
         minLines = minLines,
         placeholder = placeholder?.let { { Text(it, color = Hv.colors.inkMuted) } },
         trailingIcon = trailing,
-        shape = RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp),
+        shape = RoundedCornerShape(12.dp),
         colors = TextFieldDefaults.colors(
             focusedContainerColor = Hv.colors.surfaceRaised, unfocusedContainerColor = Hv.colors.surfaceRaised,
             errorContainerColor = Hv.colors.surfaceRaised, focusedIndicatorColor = Hv.colors.accent,
-            unfocusedIndicatorColor = Hv.colors.inkMuted, focusedLabelColor = Hv.colors.accent,
+            unfocusedIndicatorColor = Color.Transparent, disabledIndicatorColor = Color.Transparent,
+            focusedLabelColor = Hv.colors.accent,
         ),
     )
 }
@@ -352,12 +358,12 @@ fun QuantityStepper(value: Int, onChange: (Int) -> Unit, label: String, min: Int
     Row(modifier.semantics(mergeDescendants = false) { contentDescription = "$label: $value" }, verticalAlignment = Alignment.CenterVertically) {
         Text(label, style = Hv.type.label, color = Hv.colors.inkMuted, modifier = Modifier.weight(1f))
         OutlinedButton(onClick = { onChange((value - 1).coerceAtLeast(min)) }, enabled = value > min,
-            modifier = Modifier.size(56.dp), shape = RoundedCornerShape(6.dp), contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp),
+            modifier = Modifier.size(56.dp), shape = RoundedCornerShape(14.dp), contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp),
             border = BorderStroke(1.dp, Hv.colors.inkMuted)) { Text("−", style = Hv.type.vintageRow) }
         Text(value.toString(), style = Hv.type.vintageRow, color = Hv.colors.ink, modifier = Modifier.widthIn(min = 56.dp).padding(horizontal = 8.dp),
             textAlign = androidx.compose.ui.text.style.TextAlign.Center)
         OutlinedButton(onClick = { onChange((value + 1).coerceAtMost(max)) }, enabled = value < max,
-            modifier = Modifier.size(56.dp), shape = RoundedCornerShape(6.dp), contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp),
+            modifier = Modifier.size(56.dp), shape = RoundedCornerShape(14.dp), contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp),
             border = BorderStroke(1.dp, Hv.colors.inkMuted)) { Icon(Icons.Filled.Add, contentDescription = "Add one") }
     }
 }
@@ -368,8 +374,10 @@ fun <T> ChoiceChips(options: List<T>, selected: Set<T>, label: (T) -> String, on
         options.forEach { o ->
             FilterChip(
                 selected = o in selected, onClick = { onToggle(o) }, label = { Text(label(o)) },
-                colors = FilterChipDefaults.filterChipColors(selectedContainerColor = Hv.colors.accentContainer,
-                    selectedLabelColor = Hv.colors.onAccentContainer),
+                shape = RoundedCornerShape(50),
+                colors = FilterChipDefaults.filterChipColors(containerColor = Hv.colors.surfaceRaised, labelColor = Hv.colors.ink,
+                    selectedContainerColor = Hv.colors.accent, selectedLabelColor = Hv.colors.onAccent),
+                border = null,
             )
         }
     }
@@ -443,9 +451,10 @@ fun Fact(label: String, value: String?, modifier: Modifier = Modifier) {
 
 @Composable
 fun StatBlock(value: String, label: String, modifier: Modifier = Modifier) {
-    Column(modifier.semantics(mergeDescendants = true) {}) {
-        Text(value, style = Hv.type.title, color = Hv.colors.ink)
+    Column(modifier.clip(RoundedCornerShape(16.dp)).background(Hv.colors.surface).padding(horizontal = 14.dp, vertical = 12.dp)
+        .semantics(mergeDescendants = true) {}) {
         Text(label, style = Hv.type.caption, color = Hv.colors.inkMuted)
+        Text(value, style = Hv.type.title, color = Hv.colors.ink)
     }
 }
 

@@ -81,8 +81,8 @@ object Hv {
 fun HvTheme(
     preference: ThemePreference = ThemePreference.SYSTEM,
     reducedMotion: Boolean = false,
-    style: ThemeStyle = ThemeStyle.CLARET,
-    font: FontChoice = FontChoice.CLASSIC,
+    style: ThemeStyle = ThemeStyle.BOLD,
+    font: FontChoice = FontChoice.MODERN,
     content: @Composable () -> Unit,
 ) {
     val dark = when (preference) {
@@ -124,7 +124,7 @@ fun HvTheme(
 
     val type = HvType(
         vintageDisplay = TextStyle(fontFamily = display, fontWeight = FontWeight.Medium, fontSize = h(56), lineHeight = h(60), fontFeatureSettings = "lnum, tnum"),
-        title = TextStyle(fontFamily = heading, fontWeight = FontWeight.SemiBold, fontSize = h(28), lineHeight = h(34)),
+        title = TextStyle(fontFamily = heading, fontWeight = FontWeight.SemiBold, fontSize = h(28), lineHeight = h(34), letterSpacing = (-0.3).sp),
         wineName = TextStyle(fontFamily = heading, fontWeight = FontWeight.Medium, fontSize = h(20), lineHeight = h(26)),
         vintageRow = TextStyle(fontFamily = heading, fontWeight = FontWeight.Medium, fontSize = h(22), lineHeight = h(26), fontFeatureSettings = "lnum, tnum"),
         body = TextStyle(fontFamily = body, fontWeight = FontWeight.Normal, fontSize = 16.sp, lineHeight = 24.sp),
@@ -162,8 +162,8 @@ fun HvTheme(
         labelLarge = type.label, labelMedium = type.caption.copy(fontWeight = FontWeight.Medium), labelSmall = type.caption,
     )
     val shapes = Shapes(
-        extraSmall = RoundedCornerShape(4.dp), small = RoundedCornerShape(6.dp), medium = RoundedCornerShape(6.dp),
-        large = RoundedCornerShape(16.dp), extraLarge = RoundedCornerShape(16.dp),
+        extraSmall = RoundedCornerShape(8.dp), small = RoundedCornerShape(12.dp), medium = RoundedCornerShape(16.dp),
+        large = RoundedCornerShape(20.dp), extraLarge = RoundedCornerShape(28.dp),
     )
 
     CompositionLocalProvider(LocalHvColors provides colors, LocalHvType provides type, LocalReducedMotion provides reducedMotion) {

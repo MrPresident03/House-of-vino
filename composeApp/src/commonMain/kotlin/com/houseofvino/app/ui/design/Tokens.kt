@@ -23,93 +23,62 @@ data class Palette(
 )
 
 object Tokens {
+    // Colour themes (Settings › Preferences). DesignTokensTest checks every palette listed in ThemeStyle.
+
+    /** Bold, dark (the default): near-black with a bright wine accent. */
     val Dark = Palette(
-        bg = 0xFF1B1819, surface = 0xFF231F21, surfaceRaised = 0xFF2C2729, outline = 0xFF3D3639,
-        ink = 0xFFEEE7E1, inkMuted = 0xFFA99F9A, accent = 0xFFD47A8A, onAccent = 0xFF1B1819,
-        accentContainer = 0xFF4A1622, onAccentContainer = 0xFFF3D8DD, danger = 0xFFE07A6E,
-        hold = 0xFF8C9BB0, ready = 0xFF8FB089, drinkSoon = 0xFFD2A55A, past = 0xFFB88A80,
+        bg = 0xFF0B0B0E, surface = 0xFF1A1A20, surfaceRaised = 0xFF24242C, outline = 0xFF34343E,
+        ink = 0xFFF5F5F7, inkMuted = 0xFF9E9EAA, accent = 0xFFFF4D6D, onAccent = 0xFF1A0208,
+        accentContainer = 0xFF4A1220, onAccentContainer = 0xFFFFD6DE, danger = 0xFFFF7A6B,
+        hold = 0xFF6EA8FF, ready = 0xFF3DDC84, drinkSoon = 0xFFFFB547, past = 0xFFC9A29A,
     )
 
+    /** Bold, light. */
     val Light = Palette(
-        bg = 0xFFF2EBDD, surface = 0xFFFAF6EE, surfaceRaised = 0xFFEFE6D6, outline = 0xFFD8CCBA,
-        ink = 0xFF2A2023, inkMuted = 0xFF6E625F, accent = 0xFF7B1E34, onAccent = 0xFFFFFFFF,
-        accentContainer = 0xFFF0D9DC, onAccentContainer = 0xFF4A1622, danger = 0xFFA3352A,
-        hold = 0xFF4F5F75, ready = 0xFF3F6B3A, drinkSoon = 0xFF8A5A12, past = 0xFF7A4A40,
+        bg = 0xFFFFFFFF, surface = 0xFFF4F4F6, surfaceRaised = 0xFFEAEAEE, outline = 0xFFD9D9DF,
+        ink = 0xFF111114, inkMuted = 0xFF5E5E69, accent = 0xFFC8103E, onAccent = 0xFFFFFFFF,
+        accentContainer = 0xFFFFDCE3, onAccentContainer = 0xFF5C0018, danger = 0xFFB3261E,
+        hold = 0xFF2F5FC4, ready = 0xFF16753F, drinkSoon = 0xFF8F5600, past = 0xFF7A4A40,
     )
 
-    // Extra colour themes (Settings › Appearance). Each one passes the same contrast rules as the
-    // original pair; DesignTokensTest checks every palette listed in ThemeStyle.
-
-    val ChampagneLight = Palette(
-        bg = 0xFFF6F1E4, surface = 0xFFFDFAF2, surfaceRaised = 0xFFEFE7D3, outline = 0xFFDCCFB0,
-        ink = 0xFF26221A, inkMuted = 0xFF675F4F, accent = 0xFF7A5A12, onAccent = 0xFFFFFFFF,
-        accentContainer = 0xFFF2E4BE, onAccentContainer = 0xFF3F2E06,
-        danger = 0xFFA3352A,
-        hold = 0xFF4F5F75, ready = 0xFF3F6B3A, drinkSoon = 0xFF8A5A12, past = 0xFF7A4A40,
+    /** Clean, light: white with a deep wine accent. */
+    val CleanLight = Palette(
+        bg = 0xFFFFFFFF, surface = 0xFFF4F4F6, surfaceRaised = 0xFFEAEAEE, outline = 0xFFD9D9DF,
+        ink = 0xFF111114, inkMuted = 0xFF5E5E69, accent = 0xFFB0123E, onAccent = 0xFFFFFFFF,
+        accentContainer = 0xFFF9DCE3, onAccentContainer = 0xFF5A0A20, danger = 0xFFB3261E,
+        hold = 0xFF2F5FC4, ready = 0xFF16753F, drinkSoon = 0xFF8F5600, past = 0xFF7A4A40,
     )
 
-    val ChampagneDark = Palette(
-        bg = 0xFF181612, surface = 0xFF211E18, surfaceRaised = 0xFF2B271F, outline = 0xFF3C3629,
-        ink = 0xFFEFE8D8, inkMuted = 0xFFABA18C, accent = 0xFFD9B45F, onAccent = 0xFF1A1608,
-        accentContainer = 0xFF4A3A12, onAccentContainer = 0xFFF5E6BB,
-        danger = 0xFFE07A6E,
-        hold = 0xFF8C9BB0, ready = 0xFF8FB089, drinkSoon = 0xFFD2A55A, past = 0xFFB88A80,
+    /** Clean, dark. */
+    val CleanDark = Palette(
+        bg = 0xFF121214, surface = 0xFF1C1C1F, surfaceRaised = 0xFF26262A, outline = 0xFF38383E,
+        ink = 0xFFF2F2F4, inkMuted = 0xFFA0A0AA, accent = 0xFFF07A93, onAccent = 0xFF23040C,
+        accentContainer = 0xFF4F1626, onAccentContainer = 0xFFFCD9E1, danger = 0xFFFF7A6B,
+        hold = 0xFF7EB0FF, ready = 0xFF52D68A, drinkSoon = 0xFFF5B04A, past = 0xFFC9A29A,
     )
 
-    val VineyardLight = Palette(
-        bg = 0xFFEDF0E6, surface = 0xFFF8FAF3, surfaceRaised = 0xFFE3E8D8, outline = 0xFFCBD3BC,
-        ink = 0xFF1E241C, inkMuted = 0xFF586253, accent = 0xFF2F5D34, onAccent = 0xFFFFFFFF,
-        accentContainer = 0xFFD7E6D2, onAccentContainer = 0xFF173019,
-        danger = 0xFFA3352A,
-        hold = 0xFF4F5F75, ready = 0xFF3F6B3A, drinkSoon = 0xFF8A5A12, past = 0xFF7A4A40,
+    /** Colour-coded, light: warm off-white with an indigo accent. */
+    val VividLight = Palette(
+        bg = 0xFFF6F5F2, surface = 0xFFFFFFFF, surfaceRaised = 0xFFECEAE4, outline = 0xFFD8D4CA,
+        ink = 0xFF1A1A1A, inkMuted = 0xFF5F5B53, accent = 0xFF4B3FD1, onAccent = 0xFFFFFFFF,
+        accentContainer = 0xFFE3E0FF, onAccentContainer = 0xFF221A7A, danger = 0xFFB3261E,
+        hold = 0xFF2457C5, ready = 0xFF0F7A47, drinkSoon = 0xFF9A5200, past = 0xFF7A4A40,
     )
 
-    val VineyardDark = Palette(
-        bg = 0xFF141813, surface = 0xFF1B211A, surfaceRaised = 0xFF242B22, outline = 0xFF344031,
-        ink = 0xFFE4EADF, inkMuted = 0xFF9DA898, accent = 0xFF8FC28A, onAccent = 0xFF10200F,
-        accentContainer = 0xFF1F3E22, onAccentContainer = 0xFFD5EBD0,
-        danger = 0xFFE07A6E,
-        hold = 0xFF8C9BB0, ready = 0xFF8FB089, drinkSoon = 0xFFD2A55A, past = 0xFFB88A80,
-    )
-
-    val SlateLight = Palette(
-        bg = 0xFFECEFF2, surface = 0xFFF8F9FB, surfaceRaised = 0xFFE1E6EB, outline = 0xFFC9D1D9,
-        ink = 0xFF1C2229, inkMuted = 0xFF55606B, accent = 0xFF2B4C7E, onAccent = 0xFFFFFFFF,
-        accentContainer = 0xFFD6E2F3, onAccentContainer = 0xFF14294A,
-        danger = 0xFFA3352A,
-        hold = 0xFF4F5F75, ready = 0xFF3F6B3A, drinkSoon = 0xFF8A5A12, past = 0xFF7A4A40,
-    )
-
-    val SlateDark = Palette(
-        bg = 0xFF14171B, surface = 0xFF1B1F25, surfaceRaised = 0xFF252A31, outline = 0xFF363D47,
-        ink = 0xFFE4E8ED, inkMuted = 0xFF9BA5B1, accent = 0xFF8DB4EA, onAccent = 0xFF0E1A2C,
-        accentContainer = 0xFF1E3558, onAccentContainer = 0xFFD6E4F8,
-        danger = 0xFFE07A6E,
-        hold = 0xFF8C9BB0, ready = 0xFF8FB089, drinkSoon = 0xFFD2A55A, past = 0xFFB88A80,
-    )
-
-    val RoseLight = Palette(
-        bg = 0xFFF8ECEA, surface = 0xFFFEF8F6, surfaceRaised = 0xFFF2E0DD, outline = 0xFFE2C9C5,
-        ink = 0xFF2B1F20, inkMuted = 0xFF6E5C5B, accent = 0xFFA23B55, onAccent = 0xFFFFFFFF,
-        accentContainer = 0xFFF7D6DB, onAccentContainer = 0xFF4F1424,
-        danger = 0xFFA3352A,
-        hold = 0xFF4F5F75, ready = 0xFF3F6B3A, drinkSoon = 0xFF8A5A12, past = 0xFF7A4A40,
-    )
-
-    val RoseDark = Palette(
-        bg = 0xFF1C1617, surface = 0xFF251D1E, surfaceRaised = 0xFF2F2526, outline = 0xFF423436,
-        ink = 0xFFF1E6E4, inkMuted = 0xFFB0A09E, accent = 0xFFEE9BAE, onAccent = 0xFF2A0D15,
-        accentContainer = 0xFF5A1F30, onAccentContainer = 0xFFFBDDE3,
-        danger = 0xFFE07A6E,
-        hold = 0xFF8C9BB0, ready = 0xFF8FB089, drinkSoon = 0xFFD2A55A, past = 0xFFB88A80,
+    /** Colour-coded, dark. */
+    val VividDark = Palette(
+        bg = 0xFF0F0F14, surface = 0xFF1A1A22, surfaceRaised = 0xFF25252F, outline = 0xFF363645,
+        ink = 0xFFF4F4F8, inkMuted = 0xFFA2A2B2, accent = 0xFF9C94FF, onAccent = 0xFF14104A,
+        accentContainer = 0xFF2E2873, onAccentContainer = 0xFFE3E0FF, danger = 0xFFFF7A6B,
+        hold = 0xFF7EB0FF, ready = 0xFF52D68A, drinkSoon = 0xFFFFB547, past = 0xFFC9A29A,
     )
 
     /** Wine colours for bottle silhouettes when there is no photo. */
-    const val WINE_RED = 0xFF5E1A28
-    const val WINE_WHITE = 0xFFD9C98E
-    const val WINE_ROSE = 0xFFE2A1A0
-    const val WINE_ORANGE = 0xFFC9803F
-    const val WINE_UNKNOWN = 0xFF6B6466
+    const val WINE_RED = 0xFFD12E4E
+    const val WINE_WHITE = 0xFFF2C94C
+    const val WINE_ROSE = 0xFFF58FA8
+    const val WINE_ORANGE = 0xFFF08A3C
+    const val WINE_UNKNOWN = 0xFF8A8A96
 
     /** WCAG 2.x contrast ratio between two opaque colours. */
     fun contrast(a: Long, b: Long): Double {
@@ -129,28 +98,26 @@ object Tokens {
 
 /** A colour theme the user can pick: one palette for light mode and one for dark. */
 enum class ThemeStyle(val label: String, val light: Palette, val dark: Palette) {
-    CLARET("Claret", Tokens.Light, Tokens.Dark),
-    CHAMPAGNE("Champagne", Tokens.ChampagneLight, Tokens.ChampagneDark),
-    VINEYARD("Vineyard", Tokens.VineyardLight, Tokens.VineyardDark),
-    SLATE("Slate", Tokens.SlateLight, Tokens.SlateDark),
-    ROSE("Rosé", Tokens.RoseLight, Tokens.RoseDark);
+    BOLD("Bold", Tokens.Light, Tokens.Dark),
+    CLEAN("Clean", Tokens.CleanLight, Tokens.CleanDark),
+    VIVID("Colour-coded", Tokens.VividLight, Tokens.VividDark);
 
     companion object {
-        /** Unknown or missing values fall back to the original theme. */
-        fun of(name: String?): ThemeStyle = entries.firstOrNull { it.name == name } ?: CLARET
+        /** Unknown, missing or retired values (the 0.4 previews) fall back to Bold. */
+        fun of(name: String?): ThemeStyle = entries.firstOrNull { it.name == name } ?: BOLD
     }
 }
 
 /** Typeface pairing the user can pick. Body text is IBM Plex Sans except for [SYSTEM]. */
 enum class FontChoice(val label: String, val description: String) {
+    MODERN("Modern", "IBM Plex Sans throughout"),
     CLASSIC("Classic", "Bodoni Moda headings"),
     EDITORIAL("Editorial", "Playfair Display headings"),
     GARAMOND("Garamond", "Cormorant Garamond headings"),
-    MODERN("Modern", "IBM Plex Sans throughout"),
     SYSTEM("Device", "Your phone's own font");
 
     companion object {
-        fun of(name: String?): FontChoice = entries.firstOrNull { it.name == name } ?: CLASSIC
+        fun of(name: String?): FontChoice = entries.firstOrNull { it.name == name } ?: MODERN
     }
 }
 

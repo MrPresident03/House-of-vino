@@ -167,8 +167,8 @@ class CriticalFlowsTest {
         click(onNodeWithText("Settings"))
         waitForText("Colour theme")
 
-        click(onNodeWithText("Slate").performScrollTo())
-        waitUntil(timeoutMillis = timeout) { graph.settings.get(Appearance.KEY_THEME_STYLE) == "SLATE" }
+        click(onNodeWithText("Colour-coded").performScrollTo())
+        waitUntil(timeoutMillis = timeout) { graph.settings.get(Appearance.KEY_THEME_STYLE) == "VIVID" }
         // Every pairing must load its font files and still draw the screen.
         for ((label, stored) in listOf("Editorial" to "EDITORIAL", "Garamond" to "GARAMOND", "Modern" to "MODERN", "Device" to "SYSTEM", "Classic" to "CLASSIC")) {
             click(onNodeWithText(label).performScrollTo())

@@ -2,48 +2,35 @@
 
 ## Point of view
 
-The cellar ledger. Collectors think in vintages, so the **vintage year is the signature
-element**: it is set in a high-contrast Didone, the type of Bordeaux château labels, and it
-leads every inventory row like an entry in a cellar book. Everything else stays quiet: dense,
-aligned, readable controls in a neutral grotesk. Burgundy is used only for primary actions,
-selection and focus. It is never decoration.
+Modern and high-contrast (0.4). Content sits on rounded cards that stand clearly off the
+background, one bright accent marks actions and selection, and colour carries meaning: a strip
+on every wine for its colour, and bright drinking-window statuses. Type is IBM Plex Sans
+throughout by default; the Bodoni, Playfair and Garamond pairings remain as options.
 
-## Colour tokens
+## Colour themes
 
-| Token | Dark (default) | Light (cream) | Use |
+Three themes, each with a light and a dark palette (`ThemeStyle` in `Tokens.kt`). New installs
+start on **Bold, dark**. `DesignTokensTest` runs every contrast rule against all six palettes.
+
+| Token | Bold dark (default) | Bold light | Use |
 |---|---|---|---|
-| `bg` | `#1B1819` charcoal | `#F2EBDD` parchment | app background |
-| `surface` | `#231F21` | `#FAF6EE` | sheets, rows, cards |
-| `surfaceRaised` | `#2C2729` | `#EFE6D6` | pressed / selected rows, inputs |
-| `outline` | `#3D3639` | `#D8CCBA` | hairlines, input borders |
-| `ink` | `#EEE7E1` | `#2A2023` | primary text |
-| `inkMuted` | `#A99F9A` | `#6E625F` | secondary text, metadata |
-| `accent` | `#D47A8A` | `#7B1E34` | primary buttons, selection, focus ring |
-| `onAccent` | `#1B1819` | `#FFFFFF` | text and icons on accent fills |
-| `accentContainer` | `#4A1622` | `#F0D9DC` | selected chips, quantity badge |
-| `onAccentContainer` | `#F3D8DD` | `#4A1622` | text on the above |
-| `danger` | `#E07A6E` | `#A3352A` | destructive actions, validation errors |
+| `bg` | `#0B0B0E` | `#FFFFFF` | app background |
+| `surface` | `#1A1A20` | `#F4F4F6` | cards, rows, bottom bar |
+| `surfaceRaised` | `#24242C` | `#EAEAEE` | inputs, chips, secondary buttons |
+| `outline` | `#34343E` | `#D9D9DF` | hairlines |
+| `ink` | `#F5F5F7` | `#111114` | primary text |
+| `inkMuted` | `#9E9EAA` | `#5E5E69` | secondary text |
+| `accent` | `#FF4D6D` | `#C8103E` | primary buttons, selected chips and tab |
+| `onAccent` | `#1A0208` | `#FFFFFF` | text on accent |
+| `danger` | `#FF7A6B` | `#B3261E` | destructive actions, errors |
+| Hold / Ready / Drink soon / Past | `#6EA8FF` `#3DDC84` `#FFB547` `#C9A29A` | `#2F5FC4` `#16753F` `#8F5600` `#7A4A40` | drinking-window pills |
 
-Status colours for drinking windows are muted on purpose. Every status also carries a text
-label, so colour is never the only signal:
+**Clean** is the same layout in white with a deep wine accent (`#B0123E`); **Colour-coded** is
+warm off-white with an indigo accent (`#4B3FD1`). Their dark variants follow the Bold pattern.
+Corners: 12 dp fields, 14 dp buttons, 16 dp cards, pills for chips and statuses.
 
-| Status | Dark | Light |
-|---|---|---|
-| Hold (too young) | `#8C9BB0` | `#4F5F75` |
-| Ready (in window) | `#8FB089` | `#3F6B3A` |
-| Drink soon (final year) | `#D2A55A` | `#8A5A12` |
-| Past window | `#B88A80` | `#7A4A40` |
-
-### Colour themes
-
-The table above is **Claret**, the default. Settings › Preferences offers four more, each with its
-own light and dark palette: **Champagne** (gold), **Vineyard** (green), **Slate** (steel blue) and
-**Rosé** (pink). They change surfaces, ink and the accent; the drinking-window status colours are
-shared. The values live in `Tokens.kt` (`ThemeStyle`), and `DesignTokensTest` runs every contrast
-rule against all ten palettes, so a new theme can't ship unreadable.
-
-Wine colour swatches are used for bottle silhouettes when there is no photo: red `#5E1A28`,
-white `#D9C98E`, rosé `#E2A1A0`, orange `#C9803F`, unknown `#6B6466`.
+Wine colours (the strip on each row and the bottle silhouette when there is no photo): red
+`#D12E4E`, white `#F2C94C`, rosé `#F58FA8`, orange `#F08A3C`, unknown `#8A8A96`.
 
 Every text/background pair meets WCAG AA: 4.5:1 for body text, 3:1 for large text and UI glyphs.
 `DesignTokensTest` checks the pairs, including the status colours, which appear as caption text.

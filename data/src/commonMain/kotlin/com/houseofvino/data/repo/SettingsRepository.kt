@@ -42,7 +42,7 @@ class SettingsRepository(private val database: LocalDatabase) {
     fun preferences(): Preferences = Preferences(
         currency = CurrencyCode.ofOrNull(get(KEY_CURRENCY)) ?: CurrencyCode.EUR,
         ratingScale = get(KEY_RATING_SCALE)?.let { runCatching { RatingScale.valueOf(it) }.getOrNull() } ?: RatingScale.HUNDRED,
-        theme = get(KEY_THEME)?.let { runCatching { ThemePreference.valueOf(it) }.getOrNull() } ?: ThemePreference.SYSTEM,
+        theme = get(KEY_THEME)?.let { runCatching { ThemePreference.valueOf(it) }.getOrNull() } ?: ThemePreference.DARK,
         dateOrder = get(KEY_DATE_ORDER)?.let { runCatching { DateOrder.valueOf(it) }.getOrNull() } ?: DateOrder.DMY,
         cellarView = get(KEY_CELLAR_VIEW) ?: "list",
         windowReminders = get(KEY_WINDOW_REMINDERS) == "true",
