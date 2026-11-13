@@ -24,6 +24,12 @@ import com.houseofvino.app.resources.bodoni_display
 import com.houseofvino.app.resources.bodoni_heading
 import com.houseofvino.app.resources.bodoni_heading_italic
 import com.houseofvino.app.resources.bodoni_heading_semibold
+import com.houseofvino.app.resources.cormorant_heading
+import com.houseofvino.app.resources.cormorant_heading_italic
+import com.houseofvino.app.resources.cormorant_heading_semibold
+import com.houseofvino.app.resources.playfair_heading
+import com.houseofvino.app.resources.playfair_heading_italic
+import com.houseofvino.app.resources.playfair_heading_semibold
 import com.houseofvino.app.resources.plex_medium
 import com.houseofvino.app.resources.plex_regular
 import com.houseofvino.app.resources.plex_semibold
@@ -75,6 +81,8 @@ object Hv {
 fun HvTheme(
     preference: ThemePreference = ThemePreference.SYSTEM,
     reducedMotion: Boolean = false,
+    style: ThemeStyle = ThemeStyle.CLARET,
+    font: FontChoice = FontChoice.CLASSIC,
     content: @Composable () -> Unit,
 ) {
     val dark = when (preference) {
@@ -82,31 +90,49 @@ fun HvTheme(
         ThemePreference.DARK -> true
         ThemePreference.LIGHT -> false
     }
-    val colors = (if (dark) Tokens.Dark else Tokens.Light).toColors(dark)
+    val colors = (if (dark) style.dark else style.light).toColors(dark)
 
-    val bodoni = FontFamily(
-        Font(Res.font.bodoni_heading, FontWeight.Medium),
-        Font(Res.font.bodoni_heading_semibold, FontWeight.SemiBold),
-        Font(Res.font.bodoni_heading_italic, FontWeight.Medium, FontStyle.Italic),
-    )
-    val bodoniDisplay = FontFamily(Font(Res.font.bodoni_display, FontWeight.Medium))
-    val plex = FontFamily(
-        Font(Res.font.plex_regular, FontWeight.Normal),
-        Font(Res.font.plex_medium, FontWeight.Medium),
-        Font(Res.font.plex_semibold, FontWeight.SemiBold),
-    )
+    // Only the chosen pairing is loaded.
+    val fonts: FontSet = when (font) {
+        FontChoice.CLASSIC -> FontSet(
+            heading = FontFamily(
+                Font(Res.font.bodoni_heading, FontWeight.Medium),
+                Font(Res.font.bodoni_heading_semibold, FontWeight.SemiBold),
+                Font(Res.font.bodoni_heading_italic, FontWeight.Medium, FontStyle.Italic),
+            ),
+            display = FontFamily(Font(Res.font.bodoni_display, FontWeight.Medium)),
+            body = plexFamily(),
+        )
+        FontChoice.EDITORIAL -> FontFamily(
+            Font(Res.font.playfair_heading, FontWeight.Medium),
+            Font(Res.font.playfair_heading_semibold, FontWeight.SemiBold),
+            Font(Res.font.playfair_heading_italic, FontWeight.Medium, FontStyle.Italic),
+        ).let { FontSet(heading = it, display = it, body = plexFamily()) }
+        // Cormorant has a small x-height, so its headings are set a little larger to read the same size.
+        FontChoice.GARAMOND -> FontFamily(
+            Font(Res.font.cormorant_heading, FontWeight.Medium),
+            Font(Res.font.cormorant_heading_semibold, FontWeight.SemiBold),
+            Font(Res.font.cormorant_heading_italic, FontWeight.Medium, FontStyle.Italic),
+        ).let { FontSet(heading = it, display = it, body = plexFamily(), headingScale = 1.12f) }
+        FontChoice.MODERN -> plexFamily().let { FontSet(heading = it, display = it, body = it) }
+        FontChoice.SYSTEM -> FontSet(heading = FontFamily.Default, display = FontFamily.Default, body = FontFamily.Default)
+    }
+    val heading = fonts.heading
+    val display = fonts.display
+    val body = fonts.body
+    fun h(size: Int) = (size * fonts.headingScale).sp
 
     val type = HvType(
-        vintageDisplay = TextStyle(fontFamily = bodoniDisplay, fontWeight = FontWeight.Medium, fontSize = 56.sp, lineHeight = 60.sp, fontFeatureSettings = "lnum, tnum"),
-        title = TextStyle(fontFamily = bodoni, fontWeight = FontWeight.SemiBold, fontSize = 28.sp, lineHeight = 34.sp),
-        wineName = TextStyle(fontFamily = bodoni, fontWeight = FontWeight.Medium, fontSize = 20.sp, lineHeight = 26.sp),
-        vintageRow = TextStyle(fontFamily = bodoni, fontWeight = FontWeight.Medium, fontSize = 22.sp, lineHeight = 26.sp, fontFeatureSettings = "lnum, tnum"),
-        body = TextStyle(fontFamily = plex, fontWeight = FontWeight.Normal, fontSize = 16.sp, lineHeight = 24.sp),
-        bodyDense = TextStyle(fontFamily = plex, fontWeight = FontWeight.Normal, fontSize = 14.sp, lineHeight = 20.sp),
-        label = TextStyle(fontFamily = plex, fontWeight = FontWeight.Medium, fontSize = 14.sp, lineHeight = 20.sp),
-        caption = TextStyle(fontFamily = plex, fontWeight = FontWeight.Normal, fontSize = 12.sp, lineHeight = 16.sp),
-        figure = TextStyle(fontFamily = plex, fontWeight = FontWeight.Medium, fontSize = 16.sp, lineHeight = 20.sp),
-        sectionTitle = TextStyle(fontFamily = bodoni, fontWeight = FontWeight.Medium, fontSize = 20.sp, lineHeight = 26.sp),
+        vintageDisplay = TextStyle(fontFamily = display, fontWeight = FontWeight.Medium, fontSize = h(56), lineHeight = h(60), fontFeatureSettings = "lnum, tnum"),
+        title = TextStyle(fontFamily = heading, fontWeight = FontWeight.SemiBold, fontSize = h(28), lineHeight = h(34)),
+        wineName = TextStyle(fontFamily = heading, fontWeight = FontWeight.Medium, fontSize = h(20), lineHeight = h(26)),
+        vintageRow = TextStyle(fontFamily = heading, fontWeight = FontWeight.Medium, fontSize = h(22), lineHeight = h(26), fontFeatureSettings = "lnum, tnum"),
+        body = TextStyle(fontFamily = body, fontWeight = FontWeight.Normal, fontSize = 16.sp, lineHeight = 24.sp),
+        bodyDense = TextStyle(fontFamily = body, fontWeight = FontWeight.Normal, fontSize = 14.sp, lineHeight = 20.sp),
+        label = TextStyle(fontFamily = body, fontWeight = FontWeight.Medium, fontSize = 14.sp, lineHeight = 20.sp),
+        caption = TextStyle(fontFamily = body, fontWeight = FontWeight.Normal, fontSize = 12.sp, lineHeight = 16.sp),
+        figure = TextStyle(fontFamily = body, fontWeight = FontWeight.Medium, fontSize = 16.sp, lineHeight = 20.sp),
+        sectionTitle = TextStyle(fontFamily = heading, fontWeight = FontWeight.Medium, fontSize = h(20), lineHeight = h(26)),
     )
 
     val scheme: ColorScheme = if (dark) darkColorScheme(
@@ -144,3 +170,13 @@ fun HvTheme(
         MaterialTheme(colorScheme = scheme, typography = m3Type, shapes = shapes, content = content)
     }
 }
+
+/** `heading` carries Medium, SemiBold and Medium Italic; `display` is the big vintage numeral. */
+private class FontSet(val heading: FontFamily, val display: FontFamily, val body: FontFamily, val headingScale: Float = 1f)
+
+@Composable
+private fun plexFamily(): FontFamily = FontFamily(
+    Font(Res.font.plex_regular, FontWeight.Normal),
+    Font(Res.font.plex_medium, FontWeight.Medium),
+    Font(Res.font.plex_semibold, FontWeight.SemiBold),
+)

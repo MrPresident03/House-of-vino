@@ -6,7 +6,9 @@ import kotlin.test.assertTrue
 
 /** WCAG 2.x AA: 4.5:1 for text, 3:1 for large text and non-text UI (outlines, indicators). */
 class DesignTokensTest {
-    private val themes = mapOf("dark" to Tokens.Dark, "light" to Tokens.Light)
+    private val themes: Map<String, Palette> = ThemeStyle.entries.flatMap { style ->
+        listOf("${style.label} dark" to style.dark, "${style.label} light" to style.light)
+    }.toMap()
 
     private fun assertContrast(name: String, fg: Long, bg: Long, min: Double) {
         val ratio = Tokens.contrast(fg, bg)
@@ -38,6 +40,19 @@ class DesignTokensTest {
             assertContrast("$theme $name on bg", c, p.bg, 4.5)
             assertContrast("$theme $name on surface", c, p.surface, 4.5)
         }
+    }
+
+    @Test fun everyThemeHasItsOwnName() {
+        assertEquals(ThemeStyle.entries.size * 2, themes.size)
+        assertEquals(ThemeStyle.CLARET, ThemeStyle.of(null))
+        assertEquals(ThemeStyle.CLARET, ThemeStyle.of("NOT_A_THEME"))
+        assertEquals(ThemeStyle.SLATE, ThemeStyle.of("SLATE"))
+        assertEquals(FontChoice.CLASSIC, FontChoice.of("nope"))
+    }
+
+    @Test fun accentReadsOnRaisedSurfacesAndItsContainer() = themes.forEach { (theme, p) ->
+        assertContrast("$theme accent on surfaceRaised", p.accent, p.surfaceRaised, 4.5)
+        assertContrast("$theme accent on accentContainer", p.accent, p.accentContainer, 3.0)
     }
 
     @Test fun outlinesAreDecorativeOnly() = themes.forEach { (theme, p) ->

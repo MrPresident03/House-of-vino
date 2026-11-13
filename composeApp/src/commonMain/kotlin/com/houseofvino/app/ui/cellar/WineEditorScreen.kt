@@ -27,6 +27,9 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
@@ -337,6 +340,7 @@ fun WineEditorScreen(
     val vm = viewModel(key = "editor-$wineId-$editVintageId-$prefillKey") { WineEditorViewModel(graph, wineId, editVintageId, prefillKey, wishlistItemId) }
     val state by vm.state.collectAsState()
     state.savedVintageId?.let { id -> androidx.compose.runtime.LaunchedEffect(id) { onSaved(id) } }
+    var pickingVarietal by remember { mutableStateOf(false) }
     val f = state.form
     val e = state.errors
     fun hint(key: String) = f.confidence[key]?.let { confidenceText(it) }
@@ -357,6 +361,7 @@ fun WineEditorScreen(
             if (state.mode != EditorMode.NEW_VINTAGE) {
                 ChoiceChips(WineColor.entries, setOfNotNull(f.color), { it.name.lowercase().replaceFirstChar(Char::uppercase).replace("Rose", "Rosé") },
                     { c -> vm.edit { it.copy(color = if (it.color == c) null else c) } })
+                VarietalField(f.grapes, { pickingVarietal = true }, Modifier.testTag("field-varietal"))
             }
             if (state.mode != EditorMode.EDIT) {
                 QuantityStepper(f.quantity, { q -> vm.edit { it.copy(quantity = q, addPurchase = true) } }, "Bottles", min = 1)
@@ -373,7 +378,7 @@ fun WineEditorScreen(
 
             HvButton(if (state.saving) "Saving…" else "Save", { vm.save() }, Modifier.fillMaxWidth().padding(top = 4.dp).testTag("save-wine"), enabled = !state.saving)
             TextButton(onClick = vm::toggleMore, modifier = Modifier.fillMaxWidth().testTag("more-details")) {
-                Text(if (state.showMore) "Fewer details" else "More details (region, grapes, drinking window, notes…)")
+                Text(if (state.showMore) "Fewer details" else "More details (region, drinking window, notes…)")
             }
 
             if (state.showMore) {
@@ -386,7 +391,7 @@ fun WineEditorScreen(
                     HvTextField(f.appellation, { v -> vm.edit { it.copy(appellation = v) } }, "Appellation", supporting = hint("appellation"))
                     HvTextField(f.subRegion, { v -> vm.edit { it.copy(subRegion = v) } }, "Sub-region or vineyard")
                     HvTextField(f.classification, { v -> vm.edit { it.copy(classification = v) } }, "Classification", placeholder = "e.g. Premier Grand Cru Classé")
-                    HvTextField(f.grapes, { v -> vm.edit { it.copy(grapes = v) } }, "Grapes", error = e["grapes"], placeholder = "Merlot 60%, Cabernet Franc 40%")
+                    HvTextField(f.grapes, { v -> vm.edit { it.copy(grapes = v) } }, "Grapes and percentages", error = e["grapes"], placeholder = "Merlot 60%, Cabernet Franc 40%")
                 }
                 SectionHeader("Drinking window", Modifier.padding(start = 0.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -407,6 +412,10 @@ fun WineEditorScreen(
                 Spacer(Modifier.height(24.dp))
             }
         }
+    }
+
+    if (pickingVarietal) {
+        VarietalPicker(f.grapes, onToggle = { name -> vm.edit { form -> form.withGrapeToggled(name) } }, onDismiss = { pickingVarietal = false })
     }
 
     if (state.duplicateOf.isNotEmpty()) {

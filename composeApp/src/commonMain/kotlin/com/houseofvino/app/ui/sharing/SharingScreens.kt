@@ -156,7 +156,7 @@ private fun NotShared(vm: SharingViewModel, onInvite: () -> Unit, onJoin: () -> 
     var name by remember { mutableStateOf("Our cellar") }
     Column(Modifier.verticalScroll(rememberScrollState()).imePadding().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text("Share one cellar with a partner", style = Hv.type.sectionTitle, color = Hv.colors.ink)
-        P("Your phones keep the same list of bottles, purchases and tasting notes. There's no account and no server: changes go straight from one phone to the other.")
+        P("Your phones keep the same list of bottles and purchases. There's no account and no server: changes go straight from one phone to the other.")
         P("You pair once, in person, by scanning a code. After that, tap Send changes and pass the file on with Messages, WhatsApp, email or AirDrop. Only your phones can open it.")
         if (!naming) {
             HvButton("Share this cellar", { naming = true }, Modifier.fillMaxWidth().testTag("share-cellar"))

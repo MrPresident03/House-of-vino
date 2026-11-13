@@ -5,7 +5,7 @@ import kotlinx.serialization.Serializable
 // Top-level tabs ----------------------------------------------------------------------------------
 @Serializable data object CellarRoute
 @Serializable data object SearchRoute
-@Serializable data object JournalRoute
+@Serializable data object RacksRoute
 @Serializable data object WishlistRoute
 @Serializable data object MoreRoute
 
@@ -27,17 +27,6 @@ import kotlinx.serialization.Serializable
 @Serializable data class AddChooserRoute(val unused: Int = 0)
 @Serializable data class ScanRoute(val mode: String)
 
-// Journal -------------------------------------------------------------------------------------------
-@Serializable data class TastingEditorRoute(
-    val vintageId: String? = null,
-    val tastingId: String? = null,
-    val lotId: String? = null,
-    val locationId: String? = null,
-    val consume: Boolean = false,
-)
-@Serializable data class TastingDetailRoute(val tastingId: String)
-@Serializable data class PickWineRoute(val purpose: String)
-
 // Wishlist ------------------------------------------------------------------------------------------
 @Serializable data class WishlistEditorRoute(val itemId: String? = null, val vintageId: String? = null)
 @Serializable data class WishlistDetailRoute(val itemId: String)
@@ -45,7 +34,8 @@ import kotlinx.serialization.Serializable
 // More ----------------------------------------------------------------------------------------------
 @Serializable data object LocationsRoute
 @Serializable data class LocationDetailRoute(val locationId: String)
-@Serializable data class LocationEditorRoute(val locationId: String? = null, val parentId: String? = null)
+/** [withGrid] starts a new location with rows and positions switched on (from the Racks tab). */
+@Serializable data class LocationEditorRoute(val locationId: String? = null, val parentId: String? = null, val withGrid: Boolean = false)
 @Serializable data object InsightsRoute
 @Serializable data object ImportRoute
 @Serializable data object ExportRoute

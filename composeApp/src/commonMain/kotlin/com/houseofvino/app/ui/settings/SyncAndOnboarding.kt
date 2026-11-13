@@ -20,7 +20,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -155,53 +154,3 @@ fun FirstRunScreen(onDone: () -> Unit, onJoin: () -> Unit) {
         Text("Everything stays on your phone. There's no account; you can share with a partner's phone at any time.", style = Hv.type.caption, color = Hv.colors.inkMuted)
     }
 }
-
-// =================================================================================================
-// Pick a wine (for tasting notes about wines from the cellar or anywhere)
-
-class PickWineViewModel(graph: AppGraph) : GraphViewModel(graph) {
-    val text = MutableStateFlow("")
-    private val _rows = MutableStateFlow<List<com.houseofvino.data.search.CellarRow>>(emptyList())
-    val rows: StateFlow<List<com.houseofvino.data.search.CellarRow>> = _rows.asStateFlow()
-
-    init { search("") }
-
-    fun search(t: String) {
-        text.value = t
-        launchIo {
-            _rows.value = io {
-                graph.search.searchCellar(collectionId, com.houseofvino.core.search.SearchQuery(t, filters = com.houseofvino.core.search.SearchFilters(inStockOnly = false),
-                    sort = if (t.isBlank()) com.houseofvino.core.search.SortOrder.RECENTLY_ADDED else com.houseofvino.core.search.SortOrder.RELEVANCE),
-                    0, 100, graph.platform.currentYear(), null).items
-            }
-        }
-    }
-}
-
-@Composable
-fun PickWineScreen(onBack: () -> Unit, onPicked: (String) -> Unit, onNewWine: () -> Unit) {
-    val graph = appGraph()
-    val vm = viewModel { PickWineViewModel(graph) }
-    val text by vm.text.collectAsState()
-    val rows by vm.rows.collectAsState()
-    Column(Modifier.fillMaxSize()) {
-        HvTopBar("Which wine?", onBack = onBack)
-        com.houseofvino.app.ui.design.HvTextField(text, vm::search, "Search your wines", Modifier.padding(horizontal = 16.dp))
-        TextButton(onClick = onNewWine, modifier = Modifier.padding(horizontal = 8.dp)) { Text("A wine not in my cellar…") }
-        if (rows.isEmpty()) EmptyState("No matches", "Add the wine first; it doesn't need to have bottles in stock.", action = "Add wine" to onNewWine)
-        LazyColumn {
-            items(rows, key = { it.vintageId }) { r ->
-                Row(Modifier.fillMaxWidth().clickable { onPicked(r.vintageId) }.padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text(vintageLabel(r.vintage), style = Hv.type.vintageRow, color = Hv.colors.ink, modifier = Modifier.padding(end = 12.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text(r.producer, style = Hv.type.label, color = Hv.colors.inkMuted)
-                        r.wineName?.let { Text(it, style = Hv.type.body, color = Hv.colors.ink) }
-                    }
-                    Text(r.quantity.toString(), style = Hv.type.figure, color = Hv.colors.inkMuted)
-                }
-                HorizontalDivider(Modifier.padding(start = 16.dp), color = Hv.colors.outline)
-            }
-        }
-    }
-}
-

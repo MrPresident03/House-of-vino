@@ -25,6 +25,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
@@ -43,13 +44,15 @@ import com.houseofvino.app.ui.design.HvIcons
 import com.houseofvino.app.ui.design.HvTextField
 import com.houseofvino.app.ui.design.HvTopBar
 import com.houseofvino.app.ui.design.SectionHeader
-import com.houseofvino.core.model.RatingScale
 import com.houseofvino.core.money.CurrencyCode
 import com.houseofvino.core.money.ExchangeRate
 import com.houseofvino.core.time.DateOrder
 import com.houseofvino.core.time.IsoDate
 import com.houseofvino.data.repo.SettingsRepository
 import com.houseofvino.data.repo.ThemePreference
+import com.houseofvino.app.ui.design.Appearance
+import com.houseofvino.app.ui.design.FontChoice
+import com.houseofvino.app.ui.design.ThemeStyle
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -68,7 +71,7 @@ fun MoreScreen(onLocations: () -> Unit, onInsights: () -> Unit, onImport: () -> 
         NavRow("Locations", "Cellars, fridges, racks and bottle positions", onLocations)
         NavRow("Insights", "Totals, value, drinking windows and trends", onInsights)
         NavRow("Import", "Bring in a CSV from another app", onImport)
-        NavRow("Export", "Inventory, tasting history and financial records", onExport)
+        NavRow("Export", "Inventory and financial records", onExport)
         NavRow("Sharing", "Keep one cellar with a partner's phone", onSharing)
         NavRow("Settings", "Currency, appearance, privacy", onSettings)
     }
@@ -90,7 +93,18 @@ class SettingsViewModel(graph: AppGraph) : GraphViewModel(graph) {
     private val _prefs = MutableStateFlow(graph.settings.preferences())
     val prefs: StateFlow<com.houseofvino.data.repo.Preferences> = _prefs.asStateFlow()
 
-    init { observe("setting") { _prefs.value = io { graph.settings.preferences() } } }
+    private val _style = MutableStateFlow(ThemeStyle.of(graph.settings.get(Appearance.KEY_THEME_STYLE)))
+    val style: StateFlow<ThemeStyle> = _style.asStateFlow()
+    private val _font = MutableStateFlow(FontChoice.of(graph.settings.get(Appearance.KEY_FONT)))
+    val font: StateFlow<FontChoice> = _font.asStateFlow()
+
+    init {
+        observe("setting") {
+            _prefs.value = io { graph.settings.preferences() }
+            _style.value = io { ThemeStyle.of(graph.settings.get(Appearance.KEY_THEME_STYLE)) }
+            _font.value = io { FontChoice.of(graph.settings.get(Appearance.KEY_FONT)) }
+        }
+    }
 
     fun set(key: String, value: String) = launchIo { io { graph.settings.put(key, value) } }
 
@@ -109,6 +123,8 @@ fun SettingsScreen(
     val graph = appGraph()
     val vm = viewModel { SettingsViewModel(graph) }
     val p by vm.prefs.collectAsState()
+    val style by vm.style.collectAsState()
+    val font by vm.font.collectAsState()
     Column(Modifier.fillMaxSize()) {
         HvTopBar("Settings", onBack = onBack)
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
@@ -121,9 +137,13 @@ fun SettingsScreen(
                 Text("Appearance", style = Hv.type.label, color = Hv.colors.inkMuted)
                 ChoiceChips(ThemePreference.entries, setOf(p.theme), { when (it) { ThemePreference.SYSTEM -> "Match device"; ThemePreference.DARK -> "Dark"; ThemePreference.LIGHT -> "Light" } },
                     { vm.set(SettingsRepository.KEY_THEME, it.name) })
-                Text("Ratings", style = Hv.type.label, color = Hv.colors.inkMuted)
-                ChoiceChips(RatingScale.entries, setOf(p.ratingScale), { when (it) { RatingScale.HUNDRED -> "100 points"; RatingScale.TWENTY -> "20 points"; RatingScale.FIVE_STARS -> "5 stars" } },
-                    { vm.set(SettingsRepository.KEY_RATING_SCALE, it.name) })
+                Text("Colour theme", style = Hv.type.label, color = Hv.colors.inkMuted)
+                ChoiceChips(ThemeStyle.entries, setOf(style), { it.label }, { vm.set(Appearance.KEY_THEME_STYLE, it.name) },
+                    Modifier.testTag("theme-style"))
+                Text("Font", style = Hv.type.label, color = Hv.colors.inkMuted)
+                ChoiceChips(FontChoice.entries, setOf(font), { it.label }, { vm.set(Appearance.KEY_FONT, it.name) },
+                    Modifier.testTag("font-choice"))
+                Text(font.description, style = Hv.type.caption, color = Hv.colors.inkMuted)
                 Text("Dates in imports", style = Hv.type.label, color = Hv.colors.inkMuted)
                 ChoiceChips(DateOrder.entries, setOf(p.dateOrder), { when (it) { DateOrder.DMY -> "Day first"; DateOrder.MDY -> "Month first"; DateOrder.YMD -> "Year first" } },
                     { vm.set(SettingsRepository.KEY_DATE_ORDER, it.name) })
@@ -267,7 +287,7 @@ fun EraseScreen(onBack: () -> Unit, onExport: () -> Unit, onErased: () -> Unit) 
     Column(Modifier.fillMaxSize()) {
         HvTopBar("Erase this phone", onBack = onBack)
         Column(Modifier.verticalScroll(rememberScrollState()).imePadding().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text("This deletes the cellar, tasting notes, photos and history stored on this phone. It can't be undone.",
+            Text("This deletes the cellar, photos and history stored on this phone. It can't be undone.",
                 style = Hv.type.body, color = Hv.colors.ink)
             Text(
                 if (shared) "Your partner's phone keeps its copy. To carry on sharing after erasing, join again with a new invite."

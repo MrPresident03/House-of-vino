@@ -216,7 +216,6 @@ class ExportViewModel(graph: AppGraph) : GraphViewModel(graph) {
         val csv = io {
             when (kind) {
                 "inventory" -> graph.exporter.inventoryCsv(collectionId)
-                "tastings" -> graph.exporter.tastingsCsv(collectionId)
                 else -> graph.exporter.financialCsv(collectionId)
             }
         }
@@ -233,7 +232,6 @@ fun ExportScreen(onBack: () -> Unit) {
         HvTopBar("Export", onBack = onBack)
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             ExportOption("Inventory", "Every bottle in stock with location, purchase and drinking window. Re-imports cleanly.") { vm.export("inventory") }
-            ExportOption("Tasting history", "All your notes and ratings, including wines no longer in the cellar.") { vm.export("tastings") }
             ExportOption("Financial records", "Purchases, sales, gifts and valuations in their original currencies.") { vm.export("financial") }
             Text("Files are CSV (UTF-8). Spreadsheet formulas in text are neutralised for safety.", style = Hv.type.caption, color = Hv.colors.inkMuted)
         }

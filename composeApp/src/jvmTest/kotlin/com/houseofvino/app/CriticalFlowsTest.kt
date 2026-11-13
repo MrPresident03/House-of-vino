@@ -58,7 +58,7 @@ class CriticalFlowsTest {
     private fun AppGraph.totalBottles(): Long = db.queryLong("SELECT coalesce(sum(quantity), 0) FROM stock_level") ?: 0L
 
     @Test
-    fun firstRunAddWineWithBottlesThenDrinkOneWithANote() = runComposeUiTest {
+    fun firstRunAddWineWithBottlesThenDrinkOne() = runComposeUiTest {
         val graph = testGraph()
         setContent { App(graph) }
 
@@ -80,15 +80,10 @@ class CriticalFlowsTest {
 
         click(onNodeWithText("Drink"))
         waitFor(hasTestTag("stock-submit"))
-        click(onNodeWithTag("stock-submit").performScrollTo()) // "Continue to note"
-        waitFor(hasTestTag("save-tasting"))
-        onNodeWithTag("tasting-notes").performTextInput("Cedar, graphite, still tight.")
-        click(onNodeWithTag("save-tasting").performScrollTo())
+        click(onNodeWithTag("stock-submit").performScrollTo())
 
         waitUntil(timeoutMillis = timeout) { graph.totalBottles() == 2L }
-        assertEquals(1L, graph.db.queryLong("SELECT count(*) FROM tasting"))
-        // The note and the departure are linked both ways, so history survives either being edited.
-        assertEquals(1L, graph.db.queryLong("SELECT count(*) FROM movement m JOIN tasting t ON t.movement_id = m.id WHERE m.kind = 'CONSUME'"))
+        assertEquals(1L, graph.db.queryLong("SELECT count(*) FROM movement WHERE kind = 'CONSUME'"))
     }
 
     @Test

@@ -19,19 +19,16 @@ import com.houseofvino.app.ui.common.appGraph
 import com.houseofvino.app.ui.importexport.ExportScreen
 import com.houseofvino.app.ui.importexport.ImportScreen
 import com.houseofvino.app.ui.insights.InsightsScreen
-import com.houseofvino.app.ui.journal.JournalScreen
-import com.houseofvino.app.ui.journal.TastingDetailScreen
-import com.houseofvino.app.ui.journal.TastingEditorScreen
 import com.houseofvino.app.ui.locations.LocationDetailScreen
 import com.houseofvino.app.ui.locations.LocationEditorScreen
 import com.houseofvino.app.ui.locations.LocationsScreen
+import com.houseofvino.app.ui.locations.RacksScreen
 import com.houseofvino.app.ui.scan.ScanScreen
 import com.houseofvino.app.ui.search.SearchScreen
 import com.houseofvino.app.ui.settings.ConflictsScreen
 import com.houseofvino.app.ui.settings.EraseScreen
 import com.houseofvino.app.ui.settings.FirstRunScreen
 import com.houseofvino.app.ui.settings.MoreScreen
-import com.houseofvino.app.ui.settings.PickWineScreen
 import com.houseofvino.app.ui.settings.PrivacyScreen
 import com.houseofvino.app.ui.settings.RatesScreen
 import com.houseofvino.app.ui.settings.SettingsScreen
@@ -68,12 +65,17 @@ fun AppNavHost(nav: NavHostController, start: Any, modifier: Modifier = Modifier
             SearchScreen(
                 onOpenVintage = ::openVintage,
                 onOpenWishlist = { nav.navigate(WishlistDetailRoute(it)) },
-                onOpenTasting = { nav.navigate(TastingDetailRoute(it)) },
                 onAddFromDiscover = { s -> nav.navigate(WineEditorRoute(prefill = graph.handoff.put(s))) },
             )
         }
-        composable<JournalRoute> {
-            JournalScreen(onOpen = { nav.navigate(TastingDetailRoute(it)) }, onAdd = { nav.navigate(PickWineRoute("tasting")) })
+        composable<RacksRoute> {
+            RacksScreen(
+                onOpenLocation = { nav.navigate(LocationDetailRoute(it)) },
+                onEditLocation = { nav.navigate(LocationEditorRoute(locationId = it)) },
+                onAddRack = { nav.navigate(LocationEditorRoute(withGrid = true)) },
+                onManageLocations = { nav.navigate(LocationsRoute) },
+                onOpenVintage = ::openVintage,
+            )
         }
         composable<WishlistRoute> {
             WishlistScreen(onOpen = { nav.navigate(WishlistDetailRoute(it)) }, onAdd = { nav.navigate(WishlistEditorRoute()) })
@@ -114,8 +116,6 @@ fun AppNavHost(nav: NavHostController, start: Any, modifier: Modifier = Modifier
                 onStockAction = { nav.navigate(StockActionRoute(id, it)) },
                 onAddLot = { nav.navigate(AddLotRoute(id)) },
                 onHistory = { nav.navigate(HistoryRoute(id)) },
-                onAddTasting = { nav.navigate(TastingEditorRoute(vintageId = id)) },
-                onOpenTasting = { nav.navigate(TastingDetailRoute(it)) },
                 onValuations = { nav.navigate(ValuationsRoute(id)) },
                 onOpenVintage = { nav.navigate(VintageRoute(it)) },
                 onAddVintage = { wineId -> nav.navigate(WineEditorRoute(wineId = wineId)) },
@@ -135,32 +135,10 @@ fun AppNavHost(nav: NavHostController, start: Any, modifier: Modifier = Modifier
         }
         composable<StockActionRoute> { entry ->
             val r = entry.toRoute<StockActionRoute>()
-            StockActionScreen(r.vintageId, r.action, onBack = back, onDone = back, onWriteNote = { lotId, locationId ->
-                nav.navigate(TastingEditorRoute(vintageId = r.vintageId, lotId = lotId, locationId = locationId, consume = true)) {
-                    popUpTo<StockActionRoute> { inclusive = true }
-                }
-            })
+            StockActionScreen(r.vintageId, r.action, onBack = back, onDone = back)
         }
         composable<HistoryRoute> { entry -> HistoryScreen(entry.toRoute<HistoryRoute>().vintageId, onBack = back) }
         composable<ValuationsRoute> { entry -> ValuationsScreen(entry.toRoute<ValuationsRoute>().vintageId, onBack = back) }
-
-        // ---- Journal ----------------------------------------------------------------------------
-        composable<PickWineRoute> {
-            PickWineScreen(onBack = back,
-                onPicked = { id -> nav.navigate(TastingEditorRoute(vintageId = id)) { popUpTo<PickWineRoute> { inclusive = true } } },
-                onNewWine = { nav.navigate(WineEditorRoute()) { popUpTo<PickWineRoute> { inclusive = true } } })
-        }
-        composable<TastingEditorRoute> { entry ->
-            val r = entry.toRoute<TastingEditorRoute>()
-            TastingEditorScreen(r.vintageId, r.tastingId, r.lotId, r.locationId, r.consume, onBack = back, onSaved = { id ->
-                if (r.tastingId != null) nav.popBackStack()
-                else nav.navigate(TastingDetailRoute(id)) { popUpTo<TastingEditorRoute> { inclusive = true } }
-            })
-        }
-        composable<TastingDetailRoute> { entry ->
-            val id = entry.toRoute<TastingDetailRoute>().tastingId
-            TastingDetailScreen(id, onBack = back, onEdit = { nav.navigate(TastingEditorRoute(tastingId = id)) }, onOpenWine = ::openVintage)
-        }
 
         // ---- Wishlist ---------------------------------------------------------------------------
         composable<WishlistEditorRoute> { entry ->
@@ -199,7 +177,7 @@ fun AppNavHost(nav: NavHostController, start: Any, modifier: Modifier = Modifier
         }
         composable<LocationEditorRoute> { entry ->
             val r = entry.toRoute<LocationEditorRoute>()
-            LocationEditorScreen(r.locationId, r.parentId, onBack = back, onSaved = { back() })
+            LocationEditorScreen(r.locationId, r.parentId, onBack = back, onSaved = { back() }, withGrid = r.withGrid)
         }
         composable<InsightsRoute> { InsightsScreen(onBack = back) }
         composable<ImportRoute> { ImportScreen(onBack = back, onDone = { nav.navigate(CellarRoute) { popUpTo<CellarRoute> { inclusive = false } } }) }

@@ -63,7 +63,6 @@ import com.houseofvino.app.ui.design.LoadingRows
 import com.houseofvino.app.ui.design.SectionHeader
 import com.houseofvino.app.ui.design.vintageLabel
 import com.houseofvino.core.model.BottleFormats
-import com.houseofvino.core.model.Ratings
 import com.houseofvino.core.model.WineColor
 import com.houseofvino.core.model.WineStyle
 import com.houseofvino.core.scan.WineSuggestion
@@ -77,7 +76,6 @@ import com.houseofvino.data.integrations.LookupResult
 import com.houseofvino.data.repo.LocationNode
 import com.houseofvino.data.repo.SavedSearch
 import com.houseofvino.data.search.CellarRow
-import com.houseofvino.data.search.JournalRow
 import com.houseofvino.data.search.WishlistRow
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -103,7 +101,6 @@ data class SearchState(
     val searching: Boolean = false,
     val cellar: List<CellarRow> = emptyList(),
     val wishlist: List<WishlistRow> = emptyList(),
-    val journal: List<JournalRow> = emptyList(),
     val discover: List<ExternalProduct> = emptyList(),
     val discoverNote: String? = null,
     val total: Int = 0,
@@ -125,7 +122,7 @@ class SearchViewModel(graph: AppGraph) : GraphViewModel(graph) {
             val scope = _state.value.scope
             _state.update { it.copy(recent = io { graph.settings.recentQueries(scope) }, saved = io { graph.settings.savedSearches(collectionId) }) }
         }
-        observe("wine", "vintage", "lot", "movement", "tasting", "wishlist_item", "tag", "vintage_tag") { if (hasQuery()) run(debounce = false) }
+        observe("wine", "vintage", "lot", "movement", "wishlist_item", "tag", "vintage_tag") { if (hasQuery()) run(debounce = false) }
         launchIo { loadFacets() }
     }
 
@@ -151,10 +148,13 @@ class SearchViewModel(graph: AppGraph) : GraphViewModel(graph) {
     }
     fun setFilters(f: SearchFilters) { _state.update { it.copy(filters = f) }; run(debounce = false) }
     fun setSort(s: SortOrder) { _state.update { it.copy(sort = s) }; run(debounce = false) }
-    fun clear() { _state.update { it.copy(text = "", filters = SearchFilters(), cellar = emptyList(), wishlist = emptyList(), journal = emptyList(), discover = emptyList(), total = 0, corrections = emptyMap()) } }
+    fun clear() { _state.update { it.copy(text = "", filters = SearchFilters(), cellar = emptyList(), wishlist = emptyList(), discover = emptyList(), total = 0, corrections = emptyMap()) } }
 
     fun applySaved(s: SavedSearch) {
-        _state.update { it.copy(text = s.query.text, scope = s.query.scope, filters = s.query.filters, sort = s.query.sort) }
+        // Searches saved by older versions may use the retired journal scope or rating/tasted sorts.
+        val scope = if (s.query.scope == SearchScope.JOURNAL) SearchScope.CELLAR else s.query.scope
+        val sort = if (s.query.sort == SortOrder.RATING_DESC || s.query.sort == SortOrder.TASTED_DESC) SortOrder.RELEVANCE else s.query.sort
+        _state.update { it.copy(text = s.query.text, scope = scope, filters = s.query.filters, sort = sort) }
         run(debounce = false)
     }
 
@@ -182,7 +182,7 @@ class SearchViewModel(graph: AppGraph) : GraphViewModel(graph) {
         job = viewModelScope.launch {
             if (debounce) delay(180)
             val s = _state.value
-            if (s.text.isBlank() && s.filters.activeCount == 0 && s.scope != SearchScope.WISHLIST && s.scope != SearchScope.JOURNAL) {
+            if (s.text.isBlank() && s.filters.activeCount == 0 && s.scope != SearchScope.WISHLIST) {
                 _state.update { it.copy(cellar = emptyList(), discover = emptyList(), total = 0, corrections = emptyMap(), searching = false) }
                 return@launch
             }
@@ -198,10 +198,7 @@ class SearchViewModel(graph: AppGraph) : GraphViewModel(graph) {
                         val page = io { graph.search.searchWishlist(collectionId, q, setOf("WANTED", "WATCHING", "ORDERED", "ACQUIRED"), 0, 200) }
                         _state.update { it.copy(wishlist = page.items, total = page.total, corrections = page.corrections, searching = false) }
                     }
-                    SearchScope.JOURNAL -> {
-                        val page = io { graph.search.searchJournal(collectionId, q, 0, 200) }
-                        _state.update { it.copy(journal = page.items, total = page.total, corrections = page.corrections, searching = false) }
-                    }
+                    SearchScope.JOURNAL -> _state.update { it.copy(searching = false) } // retired scope; never selectable
                     SearchScope.DISCOVER -> {
                         if (!online) {
                             _state.update { it.copy(searching = false, total = it.discover.size) }
@@ -222,13 +219,12 @@ class SearchViewModel(graph: AppGraph) : GraphViewModel(graph) {
     }
 }
 
-private val scopes = listOf(SearchScope.CELLAR to "Cellar", SearchScope.WISHLIST to "Wishlist", SearchScope.JOURNAL to "Journal", SearchScope.DISCOVER to "Discover")
+private val scopes = listOf(SearchScope.CELLAR to "Cellar", SearchScope.WISHLIST to "Wishlist", SearchScope.DISCOVER to "Discover")
 
 @Composable
 fun SearchScreen(
     onOpenVintage: (String) -> Unit,
     onOpenWishlist: (String) -> Unit,
-    onOpenTasting: (String) -> Unit,
     onAddFromDiscover: (WineSuggestion) -> Unit,
 ) {
     val graph = appGraph()
@@ -259,7 +255,7 @@ fun SearchScreen(
             HvButton("Search Open Food Facts", vm::searchOnline, Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
                 kind = ButtonKind.SECONDARY, enabled = !s.searching && s.text.trim().length >= 3)
         }
-        val hasResults = s.cellar.isNotEmpty() || s.wishlist.isNotEmpty() || s.journal.isNotEmpty() || s.discover.isNotEmpty()
+        val hasResults = s.cellar.isNotEmpty() || s.wishlist.isNotEmpty() || s.discover.isNotEmpty()
         if (s.text.isNotBlank() || s.filters.activeCount > 0 || hasResults) {
             Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text(if (s.searching) "Searching…" else "${s.total} result${if (s.total == 1) "" else "s"}", style = Hv.type.caption, color = Hv.colors.inkMuted, modifier = Modifier.weight(1f))
@@ -267,7 +263,7 @@ fun SearchScreen(
                     TextButton(onClick = { sortMenu = true }) { Text("Sort: ${sortLabel(s.sort)}") }
                     DropdownMenu(sortMenu, onDismissRequest = { sortMenu = false }) {
                         listOf(SortOrder.RELEVANCE, SortOrder.PRODUCER, SortOrder.VINTAGE_DESC, SortOrder.VINTAGE_ASC, SortOrder.DRINK_BY,
-                            SortOrder.QUANTITY_DESC, SortOrder.PRICE_DESC, SortOrder.RATING_DESC).forEach { o ->
+                            SortOrder.QUANTITY_DESC, SortOrder.PRICE_DESC).forEach { o ->
                             DropdownMenuItem(text = { Text(sortLabel(o)) }, onClick = { sortMenu = false; vm.setSort(o) })
                         }
                     }
@@ -291,12 +287,7 @@ fun SearchScreen(
                     SearchScope.WISHLIST -> items(s.wishlist, key = { it.itemId }) { row ->
                         SimpleResult(row.vintage?.let(::vintageLabel) ?: "—", row.producer.orEmpty(), row.wineName) { vm.commitRecent(); onOpenWishlist(row.itemId) }
                     }
-                    SearchScope.JOURNAL -> items(s.journal, key = { it.tastingId }) { row ->
-                        SimpleResult(vintageLabel(row.vintage), row.producer, listOfNotNull(row.wineName, row.tastedOn,
-                            row.rating?.let { Ratings.display(it, graph.settings.preferences().ratingScale) }).joinToString(" · ")) {
-                            vm.commitRecent(); onOpenTasting(row.tastingId)
-                        }
-                    }
+                    SearchScope.JOURNAL -> Unit
                     SearchScope.DISCOVER -> {
                         items(s.discover, key = { (it.code ?: "") + (it.productName ?: "") }) { p ->
                             SimpleResult("+", p.brand.orEmpty(), listOfNotNull(p.productName, p.quantityText).joinToString(" · ")) { onAddFromDiscover(p.toSuggestion()) }
@@ -319,7 +310,7 @@ fun SearchScreen(
 private fun sortLabel(s: SortOrder) = when (s) {
     SortOrder.RELEVANCE -> "Best match"; SortOrder.PRODUCER -> "Producer"; SortOrder.VINTAGE_DESC -> "Newest vintage"; SortOrder.VINTAGE_ASC -> "Oldest vintage"
     SortOrder.DRINK_BY -> "Drink by"; SortOrder.QUANTITY_DESC -> "Most bottles"; SortOrder.PRICE_DESC -> "Highest price"; SortOrder.PRICE_ASC -> "Lowest price"
-    SortOrder.RATING_DESC -> "My rating"; SortOrder.RECENTLY_ADDED -> "Recently added"; SortOrder.TASTED_DESC -> "Recently tasted"
+    SortOrder.RECENTLY_ADDED -> "Recently added"; SortOrder.RATING_DESC, SortOrder.TASTED_DESC -> "Best match"
 }
 
 @Composable
@@ -384,7 +375,6 @@ fun FiltersSheet(initial: SearchFilters, facets: FacetOptions, scope: SearchScop
     var f by remember { mutableStateOf(initial) }
     var from by remember { mutableStateOf(initial.vintageFrom?.toString().orEmpty()) }
     var to by remember { mutableStateOf(initial.vintageTo?.toString().orEmpty()) }
-    var minRating by remember { mutableStateOf(initial.minRating?.toString().orEmpty()) }
     val sheet = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheet, containerColor = Hv.colors.surface) {
         Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -442,11 +432,10 @@ fun FiltersSheet(initial: SearchFilters, facets: FacetOptions, scope: SearchScop
                 Text("Include non-vintage", style = Hv.type.body, color = Hv.colors.ink, modifier = Modifier.weight(1f))
                 Switch(f.includeNonVintage, { f = f.copy(includeNonVintage = it) })
             }
-            HvTextField(minRating, { minRating = it.filter(Char::isDigit).take(3) }, "Minimum rating (0–100)", keyboard = KeyboardType.Number)
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                HvButton("Clear all", { f = SearchFilters(); from = ""; to = ""; minRating = "" }, Modifier.weight(1f), kind = com.houseofvino.app.ui.design.ButtonKind.SECONDARY)
+                HvButton("Clear all", { f = SearchFilters(); from = ""; to = "" }, Modifier.weight(1f), kind = com.houseofvino.app.ui.design.ButtonKind.SECONDARY)
                 HvButton("Show results", {
-                    onApply(f.copy(vintageFrom = from.toIntOrNull(), vintageTo = to.toIntOrNull(), minRating = minRating.toIntOrNull()?.coerceIn(0, 100)))
+                    onApply(f.copy(vintageFrom = from.toIntOrNull(), vintageTo = to.toIntOrNull(), minRating = null))
                 }, Modifier.weight(1f).testTag("apply-filters"))
             }
             Spacer(Modifier.height(24.dp))

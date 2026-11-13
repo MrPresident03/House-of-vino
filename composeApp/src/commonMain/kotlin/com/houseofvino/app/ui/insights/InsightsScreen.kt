@@ -39,7 +39,6 @@ import com.houseofvino.app.ui.design.SectionHeader
 import com.houseofvino.app.ui.design.ShareBar
 import com.houseofvino.app.ui.design.StatBlock
 import com.houseofvino.app.ui.design.formatted
-import com.houseofvino.app.ui.journal.monthLabel
 import com.houseofvino.core.insights.DrinkingWindow
 import com.houseofvino.core.insights.InsightMath
 import com.houseofvino.core.insights.MoneySummary
@@ -130,6 +129,12 @@ private fun InsightsBody(i: Insights, year: Int) {
         BreakdownSection("By decade", i.byDecade)
         BreakdownSection("By location", i.byLocation)
     }
+}
+
+private val MONTHS = listOf("January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December")
+private fun monthLabel(yyyyMm: String): String {
+    val y = yyyyMm.take(4); val m = yyyyMm.drop(5).toIntOrNull() ?: return yyyyMm
+    return "${MONTHS[(m - 1).coerceIn(0, 11)]} $y"
 }
 
 @Composable

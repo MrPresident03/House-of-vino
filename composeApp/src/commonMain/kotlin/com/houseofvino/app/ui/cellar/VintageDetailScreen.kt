@@ -1,6 +1,5 @@
 package com.houseofvino.app.ui.cellar
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -66,8 +65,6 @@ import com.houseofvino.app.ui.design.vintageLabel
 import com.houseofvino.app.ui.photos.PhotoImage
 import com.houseofvino.core.insights.DrinkingWindow
 import com.houseofvino.core.model.BottleFormats
-import com.houseofvino.core.model.Ratings
-import com.houseofvino.core.model.Tasting
 import com.houseofvino.core.model.Valuation
 import com.houseofvino.core.search.WindowFilter
 import com.houseofvino.data.repo.VintageDetail
@@ -75,27 +72,27 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-data class VintageScreenData(val detail: VintageDetail, val tastings: List<Tasting>, val valuations: List<Valuation>)
+data class VintageScreenData(val detail: VintageDetail, val valuations: List<Valuation>)
 
 class VintageDetailViewModel(graph: AppGraph, private val vintageId: String) : GraphViewModel(graph) {
     private val _state = MutableStateFlow<Load<VintageScreenData>>(Load.Loading)
     val state: StateFlow<Load<VintageScreenData>> = _state.asStateFlow()
 
     init {
-        observe("wine", "vintage", "lot", "movement", "tasting", "valuation", "photo", "tag", "vintage_tag", "wine_grape", "location") { load() }
+        observe("wine", "vintage", "lot", "movement", "valuation", "photo", "tag", "vintage_tag", "wine_grape", "location") { load() }
     }
 
     private suspend fun load() {
         _state.value = try {
             val d = io { graph.cellar.vintageDetail(vintageId) }
             if (d == null) Load.Failed("This wine has been removed.")
-            else Load.Ready(VintageScreenData(d, io { graph.journal.forVintage(vintageId) }, io { graph.cellar.valuations(vintageId) }))
+            else Load.Ready(VintageScreenData(d, io { graph.cellar.valuations(vintageId) }))
         } catch (e: Exception) { Load.Failed(e.userMessage()) }
     }
 
     fun delete(onDone: () -> Unit) = launchIo {
         io { graph.cellar.deleteVintage(vintageId) }
-        messenger.show("Wine removed. Tasting notes are kept in your journal.")
+        messenger.show("Wine removed.")
         onDone()
     }
 }
@@ -108,8 +105,6 @@ fun VintageDetailScreen(
     onStockAction: (String) -> Unit,
     onAddLot: () -> Unit,
     onHistory: () -> Unit,
-    onAddTasting: () -> Unit,
-    onOpenTasting: (String) -> Unit,
     onValuations: () -> Unit,
     onOpenVintage: (String) -> Unit,
     onAddVintage: (wineId: String) -> Unit,
@@ -138,7 +133,7 @@ fun VintageDetailScreen(
         when (val s = state) {
             Load.Loading -> LoadingRows(4)
             is Load.Failed -> ErrorState(s.message, null)
-            is Load.Ready -> DetailBody(s.value, year, onStockAction, onAddLot, onAddTasting, onOpenTasting, onValuations, onOpenVintage, onAddVintage)
+            is Load.Ready -> DetailBody(s.value, year, onStockAction, onAddLot, onValuations, onOpenVintage, onAddVintage)
         }
     }
     if (confirmDelete) {
@@ -148,7 +143,7 @@ fun VintageDetailScreen(
             title = { Text("Delete this wine?") },
             text = {
                 Text(if (bottles > 0) "You still have $bottles bottle(s). Record them as drunk, sold or lost first, so your history stays accurate."
-                     else "The wine is removed from your cellar. Tasting notes and purchase history are kept.")
+                     else "The wine is removed from your cellar. Purchase history is kept.")
             },
             confirmButton = { if (bottles == 0) TextButton(onClick = { confirmDelete = false; vm.delete(onBack) }) { Text("Delete") } },
             dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text(if (bottles > 0) "OK" else "Cancel") } },
@@ -162,8 +157,6 @@ private fun DetailBody(
     year: Int,
     onStockAction: (String) -> Unit,
     onAddLot: () -> Unit,
-    onAddTasting: () -> Unit,
-    onOpenTasting: (String) -> Unit,
     onValuations: () -> Unit,
     onOpenVintage: (String) -> Unit,
     onAddVintage: (String) -> Unit,
@@ -172,7 +165,6 @@ private fun DetailBody(
     val w = d.wine
     val v = d.vintage
     val status = DrinkingWindow.status(v.drinkFrom, v.drinkUntil, year)
-    val scale = appGraph().settings.preferences().ratingScale
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(bottom = 32.dp)) {
         // Header: the vintage numeral is the signature element.
         Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalAlignment = Alignment.Top) {
@@ -231,22 +223,6 @@ private fun DetailBody(
             if (d.stock.any { it.quantity < 0 }) {
                 Text("More bottles were recorded as removed than were in stock — probably changes made on two devices. Count the bottles and use Count to correct it.",
                     style = Hv.type.bodyDense, color = Hv.colors.danger, modifier = Modifier.padding(16.dp))
-            }
-        }
-
-        SectionHeader("Tasting notes", trailing = { TextButton(onClick = onAddTasting) { Text("Add note") } })
-        if (data.tastings.isEmpty()) {
-            Text("No notes yet. When you open a bottle, “Drink” lets you write one.", style = Hv.type.bodyDense, color = Hv.colors.inkMuted,
-                modifier = Modifier.padding(horizontal = 16.dp))
-        }
-        data.tastings.take(5).forEach { t ->
-            Column(Modifier.fillMaxWidth().clickable { onOpenTasting(t.id) }.padding(horizontal = 16.dp, vertical = 10.dp)) {
-                Row {
-                    Text(t.tastedOn.toString(), style = Hv.type.label, color = Hv.colors.inkMuted, modifier = Modifier.weight(1f))
-                    t.rating?.let { Text(Ratings.display(it, scale), style = Hv.type.figure, color = Hv.colors.ink) }
-                }
-                t.notes?.let { Text(it, style = Hv.type.body, color = Hv.colors.ink, maxLines = 3) }
-                t.occasion?.let { Text(it, style = Hv.type.caption, color = Hv.colors.inkMuted) }
             }
         }
 
