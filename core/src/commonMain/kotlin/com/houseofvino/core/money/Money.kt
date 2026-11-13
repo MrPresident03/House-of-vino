@@ -142,6 +142,8 @@ data class MoneyFormatStyle(
     }
 }
 
+private fun Char.isSpaceLike(): Boolean = isWhitespace() || this == '\u00A0' || this == '\u2007' || this == '\u2009' || this == '\u202F'
+
 internal object DecimalText {
 
     fun parseToMinor(input: String, minorDigits: Int, decimalSeparator: Char?, rounding: ExcessPrecision): Long {
@@ -152,8 +154,28 @@ internal object DecimalText {
             negative = true
             s = s.substring(1, s.length - 1).trim()
         }
-        // Strip currency symbols/codes and spaces (including NBSP and thin spaces).
-        s = s.filter { it.isDigit() || it == '.' || it == ',' || it == '-' || it == '+' || it == '\'' }
+        // Exactly one number, optionally wrapped in a currency symbol/code and a sign. Anything else is rejected
+        // (so "45 (list 60)" or "1e5" can't be misread as a different amount).
+        val isDigitOrSep = { ch: Char -> ch.isDigit() || ch == '.' || ch == ',' }
+        val first = s.indexOfFirst(isDigitOrSep)
+        val last = s.indexOfLast(isDigitOrSep)
+        require(first >= 0) { "Not a number: $input" }
+        val prefix = s.substring(0, first).filterNot { it.isSpaceLike() }
+        val suffix = s.substring(last + 1).filterNot { it.isSpaceLike() }
+        val isCurrencyChar = { ch: Char -> ch.isLetter() || ch.category == CharCategory.CURRENCY_SYMBOL }
+        // A currency is a symbol, a three-letter code, or both ("US$"): longer words are not a currency.
+        require(suffix.length <= 4 && suffix.count { it.isLetter() } <= 3 && suffix.all(isCurrencyChar)) { "Not a number: $input" }
+        require(prefix.length <= 5 && prefix.count { it.isLetter() } <= 3 && prefix.all { isCurrencyChar(it) || it == '-' || it == '+' }) { "Not a number: $input" }
+        val signs = prefix.filter { it == '-' || it == '+' }
+        require(signs.length <= 1) { "Not a number: $input" }
+        val core = s.substring(first, last + 1)
+        require(core.all { isDigitOrSep(it) || it == '\'' || it.isSpaceLike() }) { "Not a number: $input" }
+        val groups = core.split(Regex("[\\s\\u00A0\\u2007\\u2009\\u202F]+"))
+        for (g in groups.drop(1)) {
+            // A space is a thousands separator: it must be followed by exactly three digits ("1 234,50").
+            require(g.length >= 3 && g.take(3).all { it.isDigit() } && !(g.length > 3 && g[3].isDigit())) { "Not a number: $input" }
+        }
+        s = signs + core.filterNot { it.isSpaceLike() }
         if (s.startsWith('-')) { negative = !negative; s = s.substring(1) }
         else if (s.startsWith('+')) s = s.substring(1)
         require(s.isNotEmpty() && s.none { it == '-' || it == '+' }) { "Not a number: $input" }

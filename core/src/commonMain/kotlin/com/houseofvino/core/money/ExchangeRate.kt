@@ -54,6 +54,11 @@ data class ExchangeRate(
  */
 class CurrencyConverter(private val rates: List<ExchangeRate>) {
 
+    private companion object {
+        /** Newest date wins; same-day rates are ordered by value then source so every phone picks the same one. */
+        val LATEST: Comparator<ExchangeRate> = compareBy<ExchangeRate>({ it.asOf }, { it.rateE8 }, { it.source })
+    }
+
     data class Result(
         val total: Money,
         val ratesUsed: List<ExchangeRate>,
@@ -62,8 +67,8 @@ class CurrencyConverter(private val rates: List<ExchangeRate>) {
 
     fun rateFor(from: CurrencyCode, to: CurrencyCode): ExchangeRate? {
         if (from == to) return null
-        val direct = rates.filter { it.base == from && it.quote == to }.maxByOrNull { it.asOf }
-        val inverse = rates.filter { it.base == to && it.quote == from }.maxByOrNull { it.asOf }
+        val direct = rates.filter { it.base == from && it.quote == to }.maxWithOrNull(LATEST)
+        val inverse = rates.filter { it.base == to && it.quote == from }.maxWithOrNull(LATEST)
         return when {
             direct != null && inverse != null -> if (direct.asOf >= inverse.asOf) direct else inverse.inverted()
             direct != null -> direct

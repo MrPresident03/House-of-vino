@@ -321,15 +321,37 @@ class CellarRepository(private val database: LocalDatabase) {
         val target = requireNotNull(catalog.vintageById(targetVintageId).executeAsOneOrNull()) { "Target not found" }
         val sameVintage = source.vintage_kind == target.vintage_kind && source.year == target.year
         require(sameVintage || confirmDifferentVintage) { "These are different vintages; confirm the merge explicitly" }
+        require(source.wine_id == target.wine_id) { "Only vintages of the same wine can be merged" }
+        // A tag already on the target must not be linked twice: retire the source's duplicate link instead.
+        val targetTagIds = catalog.vintageTagLinks(targetVintageId).executeAsList().map { it.tag_id }.toMutableSet()
+        val duplicateLinks = HashSet<String>()
+        for (link in catalog.vintageTagLinks(sourceVintageId).executeAsList()) {
+            if (!targetTagIds.add(link.tag_id)) {
+                catalog.softDeleteVintageTag(now, link.id)
+                touched(SyncTables.VINTAGE_TAG, link.id)
+                duplicateLinks += link.id
+            }
+        }
         val reassign = listOf("lot", "tasting", "valuation", "vintage_tag", "barcode", "wishlist_item")
         for (table in reassign) {
             val ids = idsWhere("SELECT id FROM $table WHERE vintage_id = ?", sourceVintageId)
             for (id in ids) {
+                if (table == "vintage_tag" && id in duplicateLinks) continue
                 database.driver.execute(null, "UPDATE $table SET vintage_id = ?, updated_at = ? WHERE id = ?", 3) {
                     bindString(0, targetVintageId); bindLong(1, now); bindString(2, id)
                 }
                 touched(SyncTables.byName(table), id)
             }
+        }
+        for (photoId in idsWhere("SELECT id FROM photo WHERE owner_type = 'VINTAGE' AND owner_id = ?", sourceVintageId)) {
+            database.driver.execute(null, "UPDATE photo SET owner_id = ?, updated_at = ? WHERE id = ?", 3) {
+                bindString(0, targetVintageId); bindLong(1, now); bindString(2, photoId)
+            }
+            touched(SyncTables.PHOTO, photoId)
+        }
+        if (target.label_photo_id == null && source.label_photo_id != null) {
+            catalog.updateVintage(target.vintage_kind, target.year, target.drink_from, target.drink_until, target.drink_window_source,
+                target.abv_bp, target.notes, source.label_photo_id, now, targetVintageId)
         }
         catalog.softDeleteVintage(now, sourceVintageId)
         touched(SyncTables.VINTAGE, sourceVintageId)
@@ -497,7 +519,7 @@ class CellarRepository(private val database: LocalDatabase) {
         val have = current.map { it.name.lowercase() }.toSet()
         for (name in wanted.filter { it.lowercase() !in have }) {
             require(name.length <= 40) { "Tag names are at most 40 characters" }
-            val tagId = catalog.tagByName(collectionId, name).executeAsOneOrNull()?.id ?: run {
+            val tagId = catalog.tagByName(collectionId, name).executeAsList().firstOrNull()?.id ?: run {
                 val id = database.newId()
                 catalog.insertTag(id, collectionId, name, null, now, now)
                 touched(SyncTables.TAG, id)

@@ -192,6 +192,9 @@ class WishlistEditorViewModel(graph: AppGraph, private val itemId: String?, priv
         val linked = existing?.vintageId ?: vintageId
         if (linked == null && f.producer.isBlank()) { _error.value = "Enter at least the producer"; return }
         val price = f.price.takeIf { it.isNotBlank() }?.let { Money.parseOrNull(it, f.currency) ?: run { _error.value = "Enter a target such as 60.00"; return } }
+        if (linked == null && f.vintageKind == VintageKindChoice.YEAR && f.year.isNotBlank() && f.year.toIntOrNull()?.let { it in 1700..2200 } != true) {
+            _error.value = "Enter a year between 1700 and 2200, or choose non-vintage"; return
+        }
         val vintage = when (f.vintageKind) {
             VintageKindChoice.YEAR -> f.year.toIntOrNull()?.takeIf { it in 1700..2200 }?.let { VintageYear.Year(it) }
             VintageKindChoice.NV -> VintageYear.NonVintage
@@ -200,7 +203,7 @@ class WishlistEditorViewModel(graph: AppGraph, private val itemId: String?, priv
         val input = WishlistInput(vintageId = linked, wineId = existing?.wineId, producer = f.producer.takeIf { linked == null },
             name = f.name.takeIf { linked == null }, vintage = if (linked == null) vintage else null, formatMl = f.formatMl,
             desiredQuantity = f.quantity, targetPrice = price, priority = f.priority, notes = f.notes)
-        launchIo(onError = { _error.value = it.userMessage() }) {
+        launchIoOnce(onError = { _error.value = it.userMessage() }) {
             val id = io { if (itemId != null) { graph.wishlist.update(itemId, input); itemId } else graph.wishlist.add(collectionId, input) }
             messenger.show("Saved to wishlist")
             _saved.value = id
@@ -215,6 +218,7 @@ fun WishlistEditorScreen(itemId: String?, vintageId: String?, onBack: () -> Unit
     val f by vm.form.collectAsState()
     val error by vm.error.collectAsState()
     val saved by vm.saved.collectAsState()
+    val submitting by vm.submitting.collectAsState()
     LaunchedEffect(saved) { saved?.let(onSaved) }
     Column(Modifier.fillMaxSize()) {
         HvTopBar(if (itemId == null) "Add to wishlist" else "Edit wishlist item", onBack = onBack)
@@ -237,7 +241,7 @@ fun WishlistEditorScreen(itemId: String?, vintageId: String?, onBack: () -> Unit
             ChoiceChips(WishlistPriority.entries, setOf(f.priority), { priorityLabel(it.name) }, { p -> vm.edit { it.copy(priority = p) } })
             HvTextField(f.notes, { v -> vm.edit { it.copy(notes = v) } }, "Notes", singleLine = false, minLines = 2)
             error?.let { Text(it, color = Hv.colors.danger, style = Hv.type.bodyDense) }
-            HvButton("Save", vm::save, Modifier.fillMaxWidth().padding(vertical = 16.dp))
+            HvButton("Save", vm::save, Modifier.fillMaxWidth().padding(vertical = 16.dp), enabled = !submitting)
         }
     }
 }

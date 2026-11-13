@@ -93,7 +93,7 @@ class CellarViewModel(graph: AppGraph) : GraphViewModel(graph) {
     val state: StateFlow<CellarState> = _state.asStateFlow()
 
     init {
-        observe("wine", "vintage", "lot", "movement", "photo", "tasting", "wine_grape", "vintage_tag") { reload() }
+        observe("wine", "vintage", "lot", "movement", "photo", "wine_grape", "vintage_tag") { reload() }
     }
 
     private fun query(s: CellarState): SearchQuery {
@@ -127,8 +127,17 @@ class CellarViewModel(graph: AppGraph) : GraphViewModel(graph) {
         if (s.loadingMore || s.endReached) return
         _state.update { it.copy(loadingMore = true) }
         viewModelScope.launch {
-            val page = io { graph.search.searchCellar(collectionId, query(s), s.rows.size, PAGE, s.currentYear, graph.settings.preferences().currency.code) }
-            _state.update { it.copy(rows = it.rows + page.items, total = page.total, loadingMore = false) }
+            try {
+                val page = io { graph.search.searchCellar(collectionId, query(s), s.rows.size, PAGE, s.currentYear, graph.settings.preferences().currency.code) }
+                // A concurrent insert can shift the offset; never append a vintage that is already listed (duplicate lazy keys crash).
+                _state.update { st ->
+                    val have = st.rows.mapTo(HashSet()) { it.vintageId }
+                    st.copy(rows = st.rows + page.items.filter { have.add(it.vintageId) }, total = page.total, loadingMore = false)
+                }
+            } catch (e: Exception) {
+                _state.update { it.copy(loadingMore = false) }
+                messenger.show(e.userMessage())
+            }
         }
     }
 
@@ -153,7 +162,7 @@ class CellarViewModel(graph: AppGraph) : GraphViewModel(graph) {
 private val sortLabels = listOf(
     SortOrder.PRODUCER to "Producer", SortOrder.VINTAGE_DESC to "Vintage, newest", SortOrder.VINTAGE_ASC to "Vintage, oldest",
     SortOrder.DRINK_BY to "Drink by", SortOrder.QUANTITY_DESC to "Most bottles", SortOrder.PRICE_DESC to "Price, highest",
-    SortOrder.RATING_DESC to "My rating", SortOrder.RECENTLY_ADDED to "Recently added",
+    SortOrder.RECENTLY_ADDED to "Recently added",
 )
 
 @Composable

@@ -1,9 +1,9 @@
 # House of Vino
 
 A cellar book for serious wine collections, for iOS and Android: inventory with purchase
-batches and locations, an append-only stock ledger, search that stays fast at thousands of
-bottles, a wishlist, a tasting journal, insights, CSV import/export and on-device label and
-barcode scanning. It works fully offline, and partners can share one cellar between their
+batches and locations, a rack view of every bottle's position, an append-only stock ledger,
+search that stays fast at thousands of bottles, a wishlist, insights, CSV import/export and
+on-device label and barcode scanning. It works fully offline, and partners can share one cellar between their
 phones without an account or a server, so it costs nothing to run.
 
 Built with Kotlin Multiplatform and Compose Multiplatform, with SQLDelight (SQLite) on the
@@ -150,8 +150,10 @@ The full reasoning is in `docs/ADR.md`; the short version:
   so it's meant to be shown in person. Android device backups exclude the cellar (ADR-11), so
   backup is a partner's phone or CSV export. Label OCR runs on the device.
 - ⚑ **Recurring cost**: none to run the app; GitHub Actions minutes for CI.
-- ⚑ **Licensing**: The LWIN catalogue is CC BY 4.0 (ADR-14). Open Food Facts data is ODbL. Fonts (Bodoni Moda, IBM Plex Sans) are under
-  the SIL Open Font License; the licence files are in `composeApp/licenses/`.
+- ⚑ **Licensing**: The LWIN catalogue is CC BY 4.0 (ADR-14). Open Food Facts data is ODbL. Fonts (Bodoni Moda, IBM Plex Sans,
+  Playfair Display, Cormorant Garamond) are under the SIL Open Font License; the licence files are in
+  `composeApp/licenses/`. The Cormorant files are subset to Latin; Playfair Display is shipped unmodified
+  because its name is reserved.
 - ⚑ **Irreversible**: joining a household merges the joining phone's cellar into it, which
   can't be undone automatically. Removing a partner can't recall what their phone already
   has. "Erase this phone" deletes the local copy after an export offer and a typed
@@ -169,5 +171,8 @@ Things that are by design or deferred:
 - Every partner can edit everything; there are no view-only partners.
 - Opening a `.hovsync` file straight from a messaging app isn't wired up yet; use Receive
   changes inside the app.
-- The journal keeps every change forever; compaction is planned before it matters (tens of
+- The tasting journal was removed from the app in 0.4. The `tasting` table and its sync rules are
+  still in the schema, unused, so notes written earlier are kept and files from partners on older
+  versions still apply.
+- The change journal keeps every change forever; compaction is planned before it matters (tens of
   thousands of edits).

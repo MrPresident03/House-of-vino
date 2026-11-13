@@ -133,7 +133,7 @@ slotsForLocation:
 SELECT * FROM slot WHERE location_id = ? AND deleted_at IS NULL ORDER BY slot_row, slot_col;
 
 slotAt:
-SELECT * FROM slot WHERE location_id = ? AND slot_row = ? AND slot_col = ? AND deleted_at IS NULL;
+SELECT * FROM slot WHERE location_id = ? AND slot_row = ? AND slot_col = ? AND deleted_at IS NULL ORDER BY created_at, id;
 
 insertSlot:
 INSERT INTO slot(id, collection_id, location_id, slot_row, slot_col, lot_id, created_at, updated_at, deleted_at, rev)

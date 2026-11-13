@@ -14,30 +14,31 @@ Launch
      │    │    ├─ StockAction(lotId, kind)     consume · sell · gift · loss · adjust
      │    │    ├─ Transfer(lotId)
      │    │    ├─ MovementHistory(vintageId)   ledger + undo (reversal)
-     │    │    ├─ AddTasting(vintageId) → TastingDetail
      │    │    └─ Valuations(vintageId)
      │    └─ AddWine (FAB)
      │         ├─ Manual  → WineEditor → AddLot
      │         ├─ ScanBarcode → Candidates (confidence) → WineEditor(prefilled)
      │         └─ ScanLabel  → OCR fields (confidence) → WineEditor(prefilled)
-     ├─ Search ─────────────── scopes: Cellar · Wishlist · Journal · Discover
+     ├─ Search ─────────────── scopes: Cellar · Wishlist · Discover
      │    ├─ Filters (sheet)   colour, style, country, region, grape, vintage range,
      │    │                    format, location, tags, price range, in stock, window status
      │    ├─ SavedSearches · RecentQueries
-     │    └─ result → VintageDetail / WishlistDetail / TastingDetail / DiscoverDetail
-     ├─ Journal ───────────── tasting history (timeline), rating filter
-     │    └─ TastingDetail(tastingId) → EditTasting
+     │    └─ result → VintageDetail / WishlistDetail / DiscoverDetail
+     ├─ Racks ─────────────── rack picker → grid of positions (tap to place / remove / open the wine),
+     │    │                    wines in the rack; empty state → set up a rack
+     │    └─ LocationDetail · EditLocation(withGrid) · Locations
      ├─ Wishlist ──────────── grouped by status, sorted by priority
      │    └─ WishlistDetail(itemId) → EditWishlist · MerchantLinks · ConvertToInventory
      └─ More
           ├─ Locations ───── tree → LocationDetail (grid of slots, contents) → EditLocation
           ├─ Insights ────── totals, cost, value (with sources), windows, consumption, breakdowns
           ├─ ImportExport ── CsvImport: pick → map columns → validate → duplicates → commit
-          │                  Export: inventory · tasting history · financial records
+          │                  Export: inventory · financial records
           ├─ Sharing ─────── not shared: Share this cellar → Invite (QR + code) · Join → scan/paste → confirm
           │                  shared: Send changes · Receive changes · phones · Invite · Remove · Stop sharing
           │                  └─ Conflicts ("Changed on both phones") → keep / use the other
-          └─ Settings ────── Sharing · Currency & rates · Preferences · Privacy · Notifications ·
+          └─ Settings ────── Sharing · Currency & rates · Preferences (light/dark, colour theme, font) ·
+                             Privacy · Notifications ·
                              Backup and export · Conflicts · Erase this phone
 ```
 

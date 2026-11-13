@@ -84,11 +84,26 @@ fun LocationDropdown(nodes: List<LocationNode>, selectedId: String?, onSelect: (
         { onSelect(it?.location?.id) }, modifier)
 }
 
+/**
+ * Keeps a typed date as YYYY-MM-DD on a number pad (which has no "-"): digits get dashes after the 4th and 6th.
+ * Input that already contains dashes (typed or pasted) is kept as is, and deleting never re-adds a dash.
+ */
+internal fun formatDateInput(old: String, new: String): String {
+    val cleaned = new.filter { it.isDigit() || it == '-' }
+    if (cleaned.length <= old.length || '-' in cleaned) return cleaned.take(10)
+    val d = cleaned.take(8)
+    return when {
+        d.length >= 6 -> d.substring(0, 4) + "-" + d.substring(4, 6) + "-" + d.substring(6)
+        d.length >= 4 -> d.substring(0, 4) + "-" + d.substring(4)
+        else -> d
+    }
+}
+
 /** ISO date entry with a picker. Typing is allowed; invalid input shows an error. */
 @Composable
 fun DateField(label: String, value: String, onValueChange: (String) -> Unit, error: String?, modifier: Modifier = Modifier) {
     var picking by remember { mutableStateOf(false) }
-    HvTextField(value, onValueChange, label, modifier, error = error, placeholder = "YYYY-MM-DD", keyboard = KeyboardType.Number,
+    HvTextField(value, { onValueChange(formatDateInput(value, it)) }, label, modifier, error = error, placeholder = "YYYY-MM-DD", keyboard = KeyboardType.Number,
         trailing = { IconButton(onClick = { picking = true }) { Icon(Icons.Filled.DateRange, contentDescription = "Choose date") } })
     if (picking) {
         val initial = IsoDate.parseOrNull(value)?.let { it.epochDay * 86_400_000L }

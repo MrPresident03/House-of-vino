@@ -82,7 +82,7 @@ class SharingViewModel(graph: AppGraph) : GraphViewModel(graph) {
         }
     }
 
-    fun create(name: String, onCreated: () -> Unit) = launchIo {
+    fun create(name: String, onCreated: () -> Unit) = launchIoOnce(resetOnSuccess = true) {
         io { graph.household.create(collectionId, name) }
         onCreated()
     }
@@ -154,15 +154,16 @@ fun SharingScreen(onBack: () -> Unit, onInvite: () -> Unit, onJoin: () -> Unit, 
 private fun NotShared(vm: SharingViewModel, onInvite: () -> Unit, onJoin: () -> Unit) {
     var naming by remember { mutableStateOf(false) }
     var name by remember { mutableStateOf("Our cellar") }
+    val submitting by vm.submitting.collectAsState()
     Column(Modifier.verticalScroll(rememberScrollState()).imePadding().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text("Share one cellar with a partner", style = Hv.type.sectionTitle, color = Hv.colors.ink)
-        P("Your phones keep the same list of bottles, purchases and tasting notes. There's no account and no server: changes go straight from one phone to the other.")
+        P("Your phones keep the same list of bottles and purchases. There's no account and no server: changes go straight from one phone to the other.")
         P("You pair once, in person, by scanning a code. After that, tap Send changes and pass the file on with Messages, WhatsApp, email or AirDrop. Only your phones can open it.")
         if (!naming) {
             HvButton("Share this cellar", { naming = true }, Modifier.fillMaxWidth().testTag("share-cellar"))
         } else {
             HvTextField(name, { name = it.take(60) }, "Name for the shared cellar")
-            HvButton("Create invite", { vm.create(name, onInvite) }, Modifier.fillMaxWidth().testTag("create-invite"), enabled = name.isNotBlank())
+            HvButton("Create invite", { vm.create(name, onInvite) }, Modifier.fillMaxWidth().testTag("create-invite"), enabled = name.isNotBlank() && !submitting)
         }
         HvButton("Join a partner's cellar", onJoin, Modifier.fillMaxWidth().testTag("join-cellar"), kind = ButtonKind.SECONDARY)
     }
@@ -343,7 +344,7 @@ class JoinViewModel(graph: AppGraph) : GraphViewModel(graph) {
 
     fun join(onJoined: () -> Unit) {
         val inv = _invite.value ?: return
-        launchIo(onError = { _error.value = it.userMessage(); _invite.value = null }) {
+        launchIoOnce(onError = { _error.value = it.userMessage(); _invite.value = null }) {
             val id = io { graph.household.join(inv, collectionId) }
             graph.useCollection(id)
             messenger.show("Joined ${inv.householdName}. Send changes so ${inv.inviterName} gets your bottles, and open the file they send you.")
@@ -360,6 +361,7 @@ fun JoinScreen(onBack: () -> Unit, onJoined: () -> Unit) {
     val error by vm.error.collectAsState()
     val pasted by vm.pasted.collectAsState()
     val mine by vm.myBottles.collectAsState()
+    val submitting by vm.submitting.collectAsState()
     var cameraProblem by remember { mutableStateOf<String?>(null) }
     Column(Modifier.fillMaxSize()) {
         HvTopBar("Join a partner's cellar", onBack = onBack)
@@ -395,7 +397,7 @@ fun JoinScreen(onBack: () -> Unit, onJoined: () -> Unit) {
                     if (mine > 0) Text("The ${SharingViewModel.plural(mine.toInt(), "bottle")} on this phone will be added to the shared cellar and sent to ${inv.inviterName}. This can't be undone.")
                 }
             },
-            confirmButton = { TextButton(onClick = { vm.join(onJoined) }, modifier = Modifier.testTag("confirm-join")) { Text("Join") } },
+            confirmButton = { TextButton(onClick = { vm.join(onJoined) }, enabled = !submitting, modifier = Modifier.testTag("confirm-join")) { Text("Join") } },
             dismissButton = { TextButton(onClick = vm::cancel) { Text("Cancel") } },
         )
     }

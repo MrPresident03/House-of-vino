@@ -27,6 +27,9 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
@@ -90,6 +93,8 @@ data class WineForm(
     /** Fields filled from a scan, with how sure the scan was. */
     val confidence: Map<String, Confidence> = emptyMap(),
     val barcode: String? = null,
+    /** True while [color] was filled in from the grapes (so it may be re-inferred), false once chosen, loaded or scanned. */
+    val colorInferred: Boolean = false,
 )
 
 data class EditorState(
@@ -192,7 +197,7 @@ class WineEditorViewModel(
             }
             s.formatMl?.let { f = f.copy(formatMl = it.value); conf["format"] = it.confidence }
             s.abvBasisPoints?.let { f = f.copy(abv = formatAbv(it.value)); conf["abv"] = it.confidence }
-            s.color?.let { f = f.copy(color = it.value); conf["color"] = it.confidence }
+            s.color?.let { f = f.copy(color = it.value, colorInferred = false); conf["color"] = it.confidence }
             s.style?.let { f = f.copy(style = it.value); conf["style"] = it.confidence }
             s.country?.let { f = f.copy(country = it.value); conf["country"] = it.confidence }
             s.region?.let { f = f.copy(region = it.value); conf["region"] = it.confidence }
@@ -208,7 +213,7 @@ class WineEditorViewModel(
     private fun placeInGrid(vintageId: String, f: WineForm) {
         val locationId = f.locationId ?: return
         val location = graph.locations.byId(locationId)?.takeIf { it.hasGrid } ?: return
-        val lot = graph.db.inventory.lotsForVintage(vintageId).executeAsList().lastOrNull() ?: return
+        val lot = graph.db.inventory.lotsForVintage(vintageId).executeAsList().maxByOrNull { it.created_at } ?: return
         repeat(f.quantity) {
             val free = graph.locations.grid(location.id).firstOrNull { it.lotId == null } ?: return
             runCatching { graph.locations.placeBottle(location.id, free.row, free.col, lot.id) }.onFailure { return }
@@ -225,9 +230,9 @@ class WineEditorViewModel(
         }
         val from = f.drinkFrom.takeIf { it.isNotBlank() }?.toIntOrNull()
         val until = f.drinkUntil.takeIf { it.isNotBlank() }?.toIntOrNull()
-        if (f.drinkFrom.isNotBlank() && from == null) put("drinkFrom", "Enter a year")
-        if (f.drinkUntil.isNotBlank() && until == null) put("drinkUntil", "Enter a year")
-        if (from != null && until != null && from > until) put("drinkUntil", "Must be after the start year")
+        if (f.drinkFrom.isNotBlank() && (from == null || from !in 1700..2200)) put("drinkFrom", "Enter a four-digit year between 1700 and 2200")
+        if (f.drinkUntil.isNotBlank() && (until == null || until !in 1700..2200)) put("drinkUntil", "Enter a four-digit year between 1700 and 2200")
+        if (from != null && until != null && "drinkFrom" !in this && "drinkUntil" !in this && from > until) put("drinkUntil", "Must be after the start year")
         if (f.abv.isNotBlank() && parseAbv(f.abv) == null) put("abv", "Enter alcohol as a percentage, e.g. 13.5")
         val grapes = runCatching { ImportParser.parseGrapes(f.grapes) }.getOrNull()
         if (grapes == null) put("grapes", "Use “Merlot 60%, Cabernet Franc 40%”")
@@ -265,6 +270,7 @@ class WineEditorViewModel(
 
     /** Saves. [target] overrides the default when the user resolved a duplicate prompt. */
     fun save(target: WineTarget? = null, allowDuplicate: Boolean = false) {
+        if (_state.value.saving) return
         val f = _state.value.form
         val errors = validate(f)
         if (errors.isNotEmpty()) { _state.update { it.copy(errors = errors) }; return }
@@ -290,19 +296,30 @@ class WineEditorViewModel(
                     EditorMode.NEW_WINE -> graph.cellar.addWine(collectionId, target ?: WineTarget.NewWine(wineInput(f)), vintageInput(f), lotInput(f), tags, allowDuplicate)
                 }
             }
-            if (wishlistItemId != null && mode != EditorMode.EDIT) io { graph.wishlist.markAcquiredIfOpen(wishlistItemId, vintageId) }
-            labelPhoto?.let { bytes ->
-                io {
-                    val photoId = graph.photos.newPhotoId()
-                    val path = graph.platform.savePhoto(photoId, bytes)
-                    graph.photos.addWithId(photoId, collectionId, com.houseofvino.data.repo.PhotoOwner.VINTAGE, vintageId, path, 0, 0, bytes.size.toLong())
-                    graph.cellar.setLabelPhoto(vintageId, photoId)
+            // The wine is stored now. A failing follow-up step must not leave Save enabled (a retry would duplicate it).
+            var followUpError: Throwable? = null
+            suspend fun followUp(step: suspend () -> Unit) {
+                try { step() } catch (e: Throwable) {
+                    if (e is kotlinx.coroutines.CancellationException) throw e
+                    if (followUpError == null) followUpError = e
                 }
             }
-            if (mode != EditorMode.EDIT && f.addPurchase) io { placeInGrid(vintageId, f) }
-            f.barcode?.let { code ->
-                io { graph.cellar.vintage(vintageId)?.let { v -> graph.cellar.linkBarcode(collectionId, code, "EAN_13", v.wineId, vintageId, f.formatMl) } }
+            if (wishlistItemId != null && mode != EditorMode.EDIT) followUp { io { graph.wishlist.markAcquiredIfOpen(wishlistItemId, vintageId) } }
+            labelPhoto?.let { bytes ->
+                followUp {
+                    io {
+                        val photoId = graph.photos.newPhotoId()
+                        val path = graph.platform.savePhoto(photoId, bytes)
+                        graph.photos.addWithId(photoId, collectionId, com.houseofvino.data.repo.PhotoOwner.VINTAGE, vintageId, path, 0, 0, bytes.size.toLong())
+                        graph.cellar.setLabelPhoto(vintageId, photoId)
+                    }
+                }
             }
+            if (mode != EditorMode.EDIT && f.addPurchase) followUp { io { placeInGrid(vintageId, f) } }
+            f.barcode?.let { code ->
+                followUp { io { graph.cellar.vintage(vintageId)?.let { v -> graph.cellar.linkBarcode(collectionId, code, "EAN_13", v.wineId, vintageId, f.formatMl) } } }
+            }
+            followUpError?.let { messenger.show("Saved, but not everything was added: ${it.userMessage()}") }
             messenger.show(when (mode) { EditorMode.EDIT -> "Changes saved"; else -> if (f.addPurchase) "Added ${f.quantity} bottle${if (f.quantity == 1) "" else "s"}" else "Wine added" })
             _state.update { it.copy(saving = false, savedVintageId = vintageId) }
         }
@@ -337,6 +354,7 @@ fun WineEditorScreen(
     val vm = viewModel(key = "editor-$wineId-$editVintageId-$prefillKey") { WineEditorViewModel(graph, wineId, editVintageId, prefillKey, wishlistItemId) }
     val state by vm.state.collectAsState()
     state.savedVintageId?.let { id -> androidx.compose.runtime.LaunchedEffect(id) { onSaved(id) } }
+    var pickingVarietal by remember { mutableStateOf(false) }
     val f = state.form
     val e = state.errors
     fun hint(key: String) = f.confidence[key]?.let { confidenceText(it) }
@@ -356,7 +374,8 @@ fun WineEditorScreen(
             VintageInput(f.vintageKind, f.year, { k -> vm.edit { it.copy(vintageKind = k) } }, { y -> vm.edit { it.copy(year = y) } }, e["year"], f.confidence["vintage"])
             if (state.mode != EditorMode.NEW_VINTAGE) {
                 ChoiceChips(WineColor.entries, setOfNotNull(f.color), { it.name.lowercase().replaceFirstChar(Char::uppercase).replace("Rose", "Rosé") },
-                    { c -> vm.edit { it.copy(color = if (it.color == c) null else c) } })
+                    { c -> vm.edit { it.copy(color = if (it.color == c) null else c, colorInferred = false) } })
+                VarietalField(f.grapes, { pickingVarietal = true }, Modifier.testTag("field-varietal"))
             }
             if (state.mode != EditorMode.EDIT) {
                 QuantityStepper(f.quantity, { q -> vm.edit { it.copy(quantity = q, addPurchase = true) } }, "Bottles", min = 1)
@@ -373,7 +392,7 @@ fun WineEditorScreen(
 
             HvButton(if (state.saving) "Saving…" else "Save", { vm.save() }, Modifier.fillMaxWidth().padding(top = 4.dp).testTag("save-wine"), enabled = !state.saving)
             TextButton(onClick = vm::toggleMore, modifier = Modifier.fillMaxWidth().testTag("more-details")) {
-                Text(if (state.showMore) "Fewer details" else "More details (region, grapes, drinking window, notes…)")
+                Text(if (state.showMore) "Fewer details" else "More details (region, drinking window, notes…)")
             }
 
             if (state.showMore) {
@@ -386,7 +405,7 @@ fun WineEditorScreen(
                     HvTextField(f.appellation, { v -> vm.edit { it.copy(appellation = v) } }, "Appellation", supporting = hint("appellation"))
                     HvTextField(f.subRegion, { v -> vm.edit { it.copy(subRegion = v) } }, "Sub-region or vineyard")
                     HvTextField(f.classification, { v -> vm.edit { it.copy(classification = v) } }, "Classification", placeholder = "e.g. Premier Grand Cru Classé")
-                    HvTextField(f.grapes, { v -> vm.edit { it.copy(grapes = v) } }, "Grapes", error = e["grapes"], placeholder = "Merlot 60%, Cabernet Franc 40%")
+                    HvTextField(f.grapes, { v -> vm.edit { it.copy(grapes = v) } }, "Grapes and percentages", error = e["grapes"], placeholder = "Merlot 60%, Cabernet Franc 40%")
                 }
                 SectionHeader("Drinking window", Modifier.padding(start = 0.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -407,6 +426,10 @@ fun WineEditorScreen(
                 Spacer(Modifier.height(24.dp))
             }
         }
+    }
+
+    if (pickingVarietal) {
+        VarietalPicker(f.grapes, onToggle = { name -> vm.edit { form -> form.withGrapeToggled(name) } }, onDismiss = { pickingVarietal = false })
     }
 
     if (state.duplicateOf.isNotEmpty()) {

@@ -34,6 +34,14 @@ label, so colour is never the only signal:
 | Drink soon (final year) | `#D2A55A` | `#8A5A12` |
 | Past window | `#B88A80` | `#7A4A40` |
 
+### Colour themes
+
+The table above is **Claret**, the default. Settings › Preferences offers four more, each with its
+own light and dark palette: **Champagne** (gold), **Vineyard** (green), **Slate** (steel blue) and
+**Rosé** (pink). They change surfaces, ink and the accent; the drinking-window status colours are
+shared. The values live in `Tokens.kt` (`ThemeStyle`), and `DesignTokensTest` runs every contrast
+rule against all ten palettes, so a new theme can't ship unreadable.
+
 Wine colour swatches are used for bottle silhouettes when there is no photo: red `#5E1A28`,
 white `#D9C98E`, rosé `#E2A1A0`, orange `#C9803F`, unknown `#6B6466`.
 
@@ -49,6 +57,12 @@ Every text/background pair meets WCAG AA: 4.5:1 for body text, 3:1 for large tex
   It is never used below 20 sp.
 - **IBM Plex Sans** (OFL) is used for all controls, body text and metadata. Instances: 400, 500, 600.
   Numbers use tabular figures (`tnum`) so quantities and prices align in columns.
+
+The pairing above is **Classic**. Settings › Preferences offers four more (`FontChoice`):
+**Editorial** (Playfair Display headings), **Garamond** (Cormorant Garamond headings, set 12 % larger
+because of its small x-height), **Modern** (IBM Plex Sans throughout) and **Device** (the phone's own
+font). Body text stays IBM Plex Sans in all but Device. Only the chosen pairing is loaded. Playfair
+Display is shipped unmodified (reserved font name); the Cormorant files are subset to Latin.
 
 | Role | Face | Size / line | Notes |
 |---|---|---|---|

@@ -171,7 +171,8 @@ class ImportParser(private val mapping: ColumnMapping, private val options: Impo
         mapping.missingRequired().forEach { issues += ImportIssue(0, it, Severity.ERROR, "Map a column to ${it.label}") }
         if (issues.isNotEmpty()) return ParseResult(emptyList(), issues)
         table.rows.forEachIndexed { index, cells ->
-            val rowNumber = index + 2 // header is row 1 in spreadsheet terms
+            // True source line (blank lines are dropped and quoted fields can span lines); fall back to the position.
+            val rowNumber = table.sourceLines.getOrNull(index) ?: (index + 2) // header is row 1 in spreadsheet terms
             val rowIssues = ArrayList<ImportIssue>()
             val record = parseRow(rowNumber, cells, rowIssues)
             issues += rowIssues
@@ -181,7 +182,10 @@ class ImportParser(private val mapping: ColumnMapping, private val options: Impo
     }
 
     private fun parseRow(row: Int, cells: List<String>, issues: MutableList<ImportIssue>): ImportRecord? {
-        fun cell(f: ImportField): String? = mapping[f]?.let { cells.getOrNull(it) }?.trim()?.takeIf { it.isNotEmpty() }
+        fun cell(f: ImportField): String? = mapping[f]?.let { cells.getOrNull(it) }?.trim()
+            // Undo the export's formula-injection guard ("'- corked" was written for "- corked").
+            ?.let { if (it.length > 1 && it[0] == '\'' && it[1] in "=+-@") it.substring(1) else it }
+            ?.takeIf { it.isNotEmpty() }
         fun error(f: ImportField?, msg: String) { issues += ImportIssue(row, f, Severity.ERROR, msg) }
         fun warn(f: ImportField?, msg: String) { issues += ImportIssue(row, f, Severity.WARNING, msg) }
 
@@ -214,7 +218,12 @@ class ImportParser(private val mapping: ColumnMapping, private val options: Impo
         val totalPrice = cell(ImportField.TOTAL_PRICE)?.let { parseMoney(it, currency, ImportField.TOTAL_PRICE, ::error) }
         val price: Money? = when {
             unitPrice != null -> {
-                if (totalPrice != null && quantity > 0 && unitPrice * quantity != totalPrice) {
+                val product = if (totalPrice != null && quantity > 0) {
+                    try { unitPrice * quantity } catch (e: ArithmeticException) {
+                        error(ImportField.UNIT_PRICE, "Price × quantity is too large to be right"); null
+                    }
+                } else null
+                if (totalPrice != null && product != null && product != totalPrice) {
                     warn(ImportField.TOTAL_PRICE, "Total ${totalPrice.toPlainString()} doesn't equal $quantity × ${unitPrice.toPlainString()}; using the unit price")
                 }
                 unitPrice
@@ -311,12 +320,17 @@ class ImportParser(private val mapping: ColumnMapping, private val options: Impo
         }
 
         fun parseStyle(text: String): WineStyle? {
-            val t = TextNormalizer.normalize(text)
+            val t = TextNormalizer.tokens(text)
+            // Whole words/phrases only, so "Imported by" or "Product of Portugal" don't read as port.
+            fun has(term: String): Boolean {
+                val parts = term.split(' ')
+                return (0..t.size - parts.size).any { i -> parts.indices.all { t[i + it] == parts[it] } }
+            }
             return when {
-                listOf("sparkling", "champagne", "cremant", "cava", "spumante", "sekt", "mousseux", "petillant", "pet nat").any { t.contains(it) } -> WineStyle.SPARKLING
-                listOf("fortified", "port", "sherry", "madeira", "marsala", "vin doux").any { t.contains(it) } -> WineStyle.FORTIFIED
-                listOf("sweet", "dessert", "liquoreux", "late harvest", "icewine", "ice wine", "tokaji", "sauternes").any { t.contains(it) } -> WineStyle.SWEET
-                t == "still" || t == "dry" -> WineStyle.STILL
+                listOf("sparkling", "champagne", "cremant", "cava", "spumante", "sekt", "mousseux", "petillant", "pet nat").any(::has) -> WineStyle.SPARKLING
+                listOf("fortified", "port", "sherry", "madeira", "marsala", "vin doux").any(::has) -> WineStyle.FORTIFIED
+                listOf("sweet", "dessert", "liquoreux", "late harvest", "icewine", "ice wine", "tokaji", "sauternes").any(::has) -> WineStyle.SWEET
+                t.size == 1 && (t[0] == "still" || t[0] == "dry") -> WineStyle.STILL
                 else -> null
             }
         }

@@ -131,6 +131,18 @@ fun LocationsScreen(onBack: () -> Unit, onOpen: (String) -> Unit, onAdd: (parent
 
 // =================================================================================================
 
+/** Wines stored in [locationId] or anywhere inside it. */
+internal fun winesIn(graph: AppGraph, collectionId: String, locationId: String): List<CellarRow> =
+    graph.search.searchCellar(collectionId, SearchQuery(filters = SearchFilters(locationIds = setOf(locationId)), sort = SortOrder.PRODUCER),
+        0, 500, graph.platform.currentYear(), null).items
+
+/** Lots with bottles stored directly in [locationId], as (lot id, label), for placing into positions. */
+internal fun placeableLots(graph: AppGraph, locationId: String, rows: List<CellarRow>): List<Pair<String, String>> =
+    rows.flatMap { row ->
+        graph.cellar.stockLines(row.vintageId).filter { it.locationId == locationId && it.quantity > 0 }
+            .map { it.lotId to "${vintageLabel(row.vintage)} ${row.producer}${row.wineName?.let { n -> " $n" } ?: ""}" }
+    }
+
 class LocationDetailViewModel(graph: AppGraph, private val locationId: String) : GraphViewModel(graph) {
     private val _location = MutableStateFlow<Location?>(null)
     val location: StateFlow<Location?> = _location.asStateFlow()
@@ -148,15 +160,10 @@ class LocationDetailViewModel(graph: AppGraph, private val locationId: String) :
         observe("location", "movement", "lot", "slot", "wine", "vintage") {
             _location.value = io { graph.locations.byId(locationId) }
             _path.value = io { graph.locations.pathName(locationId) }
-            val page = io { graph.search.searchCellar(collectionId, SearchQuery(filters = SearchFilters(locationIds = setOf(locationId)), sort = SortOrder.PRODUCER), 0, 500, graph.platform.currentYear(), null) }
-            _rows.value = page.items
+            val rows = io { winesIn(graph, graph.collectionId, locationId) }
+            _rows.value = rows
             _grid.value = io { graph.locations.grid(locationId) }
-            _placeable.value = io {
-                page.items.flatMap { row ->
-                    graph.cellar.stockLines(row.vintageId).filter { it.locationId == locationId && it.quantity > 0 }
-                        .map { it.lotId to "${vintageLabel(row.vintage)} ${row.producer}${row.wineName?.let { n -> " $n" } ?: ""}" }
-                }
-            }
+            _placeable.value = io { placeableLots(graph, locationId, rows) }
         }
     }
 
@@ -199,24 +206,8 @@ fun LocationDetailScreen(locationId: String, onBack: () -> Unit, onEdit: () -> U
         }
     }
     picking?.let { slot ->
-        AlertDialog(
-            onDismissRequest = { picking = null },
-            title = { Text(slot.label ?: "Row ${slot.row}, position ${slot.col}") },
-            text = {
-                Column(Modifier.verticalScroll(rememberScrollState())) {
-                    if (slot.lotId != null) {
-                        Text("Row ${slot.row}, position ${slot.col}", style = Hv.type.body)
-                        slot.vintageId?.let { v -> TextButton(onClick = { picking = null; onOpenVintage(v) }) { Text("Open this wine") } }
-                    }
-                    else if (placeable.isEmpty()) Text("No bottles stored directly in this location. Move bottles here first.", style = Hv.type.body)
-                    else placeable.distinctBy { it.first }.forEach { (lotId, label) ->
-                        TextButton(onClick = { vm.place(slot.row, slot.col, lotId); picking = null }) { Text(label) }
-                    }
-                }
-            },
-            confirmButton = { if (slot.lotId != null) TextButton(onClick = { vm.clear(slot.row, slot.col); picking = null }) { Text("Remove from position") } },
-            dismissButton = { TextButton(onClick = { picking = null }) { Text("Close") } },
-        )
+        SlotDialog(slot, placeable, onPlace = { lotId -> vm.place(slot.row, slot.col, lotId) }, onClear = { vm.clear(slot.row, slot.col) },
+            onOpenVintage = onOpenVintage, onDismiss = { picking = null })
     }
     if (confirmDelete) AlertDialog(
         onDismissRequest = { confirmDelete = false },
@@ -232,8 +223,38 @@ private fun slotColor(color: String?): Color = when (color) {
     else -> Color(0xFF8A7A6A)
 }
 
+/** What you get when you tap a position: the bottle that's there, or the bottles you can put there. */
 @Composable
-private fun SlotGrid(location: Location, slots: List<SlotView>, onTap: (SlotView) -> Unit) {
+internal fun SlotDialog(
+    slot: SlotView,
+    placeable: List<Pair<String, String>>,
+    onPlace: (lotId: String) -> Unit,
+    onClear: () -> Unit,
+    onOpenVintage: (String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(slot.label ?: "Row ${slot.row}, position ${slot.col}") },
+        text = {
+            Column(Modifier.verticalScroll(rememberScrollState())) {
+                if (slot.lotId != null) {
+                    Text("Row ${slot.row}, position ${slot.col}", style = Hv.type.body)
+                    slot.vintageId?.let { v -> TextButton(onClick = { onDismiss(); onOpenVintage(v) }) { Text("Open this wine") } }
+                }
+                else if (placeable.isEmpty()) Text("No bottles stored directly in this location. Move bottles here first.", style = Hv.type.body)
+                else placeable.distinctBy { it.first }.forEach { (lotId, label) ->
+                    TextButton(onClick = { onPlace(lotId); onDismiss() }) { Text(label) }
+                }
+            }
+        },
+        confirmButton = { if (slot.lotId != null) TextButton(onClick = { onClear(); onDismiss() }) { Text("Remove from position") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Close") } },
+    )
+}
+
+@Composable
+internal fun SlotGrid(location: Location, slots: List<SlotView>, onTap: (SlotView) -> Unit) {
     val cols = location.gridCols ?: return
     Column(Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp)) {
         slots.chunked(cols).forEach { rowSlots ->
@@ -257,11 +278,11 @@ private fun SlotGrid(location: Location, slots: List<SlotView>, onTap: (SlotView
 
 // =================================================================================================
 
-class LocationEditorViewModel(graph: AppGraph, private val locationId: String?, parentId: String?) : GraphViewModel(graph) {
+class LocationEditorViewModel(graph: AppGraph, private val locationId: String?, parentId: String?, withGrid: Boolean = false) : GraphViewModel(graph) {
     val name = MutableStateFlow("")
-    val kind = MutableStateFlow(if (parentId == null) LocationKind.CELLAR else LocationKind.RACK)
+    val kind = MutableStateFlow(if (parentId == null && !withGrid) LocationKind.CELLAR else LocationKind.RACK)
     val parent = MutableStateFlow(parentId)
-    val hasGrid = MutableStateFlow(false)
+    val hasGrid = MutableStateFlow(withGrid)
     val rows = MutableStateFlow("")
     val cols = MutableStateFlow("")
     val notes = MutableStateFlow("")
@@ -287,7 +308,7 @@ class LocationEditorViewModel(graph: AppGraph, private val locationId: String?, 
         val c = if (hasGrid.value) cols.value.toIntOrNull() else null
         if (hasGrid.value && (r == null || c == null || r !in 1..200 || c !in 1..200)) { _error.value = "Rows and positions must be between 1 and 200"; return }
         val input = LocationInput(name.value, kind.value, parent.value, r, c, 0, notes.value)
-        launchIo(onError = { _error.value = it.userMessage() }) {
+        launchIoOnce(onError = { _error.value = it.userMessage() }) {
             val id = io { if (locationId == null) graph.locations.create(collectionId, input) else { graph.locations.update(locationId, input); locationId } }
             _saved.value = id
         }
@@ -295,9 +316,9 @@ class LocationEditorViewModel(graph: AppGraph, private val locationId: String?, 
 }
 
 @Composable
-fun LocationEditorScreen(locationId: String?, parentId: String?, onBack: () -> Unit, onSaved: (String) -> Unit) {
+fun LocationEditorScreen(locationId: String?, parentId: String?, onBack: () -> Unit, onSaved: (String) -> Unit, withGrid: Boolean = false) {
     val graph = appGraph()
-    val vm = viewModel(key = "le-$locationId-$parentId") { LocationEditorViewModel(graph, locationId, parentId) }
+    val vm = viewModel(key = "le-$locationId-$parentId-$withGrid") { LocationEditorViewModel(graph, locationId, parentId, withGrid) }
     val name by vm.name.collectAsState()
     val kind by vm.kind.collectAsState()
     val parent by vm.parent.collectAsState()
@@ -308,6 +329,7 @@ fun LocationEditorScreen(locationId: String?, parentId: String?, onBack: () -> U
     val nodes by vm.nodes.collectAsState()
     val error by vm.error.collectAsState()
     val saved by vm.saved.collectAsState()
+    val submitting by vm.submitting.collectAsState()
     LaunchedEffect(saved) { saved?.let(onSaved) }
     Column(Modifier.fillMaxSize()) {
         HvTopBar(if (locationId == null) "Add location" else "Edit location", onBack = onBack)
@@ -331,7 +353,7 @@ fun LocationEditorScreen(locationId: String?, parentId: String?, onBack: () -> U
             }
             HvTextField(notes, { vm.notes.value = it }, "Notes", singleLine = false, minLines = 2)
             error?.let { Text(it, color = Hv.colors.danger, style = Hv.type.bodyDense) }
-            HvButton("Save", vm::save, Modifier.fillMaxWidth().padding(vertical = 16.dp))
+            HvButton("Save", vm::save, Modifier.fillMaxWidth().padding(vertical = 16.dp), enabled = !submitting)
         }
     }
 }

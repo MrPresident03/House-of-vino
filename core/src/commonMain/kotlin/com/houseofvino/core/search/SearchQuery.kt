@@ -72,6 +72,8 @@ object QueryParser {
         val vintageFrom: Int?,
         val vintageTo: Int?,
         val nonVintageOnly: Boolean,
+        /** [tokens] with the final, possibly half-typed token left unexpanded ('st' must still find Stellenbosch). */
+        val prefixTokens: List<String> = tokens,
     )
 
     private val FIELD = Regex("""(\w+):(?:"([^"]*)"|(\S+))""")
@@ -94,11 +96,11 @@ object QueryParser {
             val field = m.groupValues[1].lowercase()
             val value = m.groupValues[2].ifEmpty { m.groupValues[3] }
             val handled = when (field) {
-                "producer", "p" -> producers.add(value)
-                "region", "r", "appellation" -> regions.add(value)
-                "country" -> countries.add(value)
-                "grape", "g", "variety", "varietal" -> grapes.add(value)
-                "tag", "t" -> tags.add(value)
+                "producer", "p" -> producers.add(value).let { true }
+                "region", "r", "appellation" -> regions.add(value).let { true }
+                "country" -> countries.add(value).let { true }
+                "grape", "g", "variety", "varietal" -> grapes.add(value).let { true }
+                "tag", "t" -> tags.add(value).let { true }
                 "color", "colour" -> colorOf(value)?.let { colors.add(it) } != null
                 "style" -> styleOf(value)?.let { styles.add(it) } != null
                 "vintage", "v", "year" -> {
@@ -126,6 +128,10 @@ object QueryParser {
         return Parsed(
             freeText = free,
             tokens = TextNormalizer.tokens(free),
+            prefixTokens = TextNormalizer.tokens(free).let { expanded ->
+                val typed = TextNormalizer.tokens(free, expandAbbreviations = false)
+                if (expanded.isEmpty()) expanded else expanded.dropLast(1) + typed.last()
+            },
             producers = producers, regions = regions, countries = countries, grapes = grapes, tags = tags,
             colors = colors, styles = styles, vintageFrom = from, vintageTo = to, nonVintageOnly = nvOnly,
         )

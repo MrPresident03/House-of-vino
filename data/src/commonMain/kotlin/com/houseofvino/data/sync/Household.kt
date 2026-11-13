@@ -121,6 +121,7 @@ class HouseholdRepository(private val database: LocalDatabase, private val defau
             }
             q.retireKeys(now, target)
             if (q.keyById(key.id).executeAsOneOrNull() == null) q.insertKey(key.id, target, Base64.encode(key.secret), now)
+            else q.reviveKey(key.id, target) // re-scanning an invite after "stop sharing" must make its key current again
             q.upsertPeer(invite.inviterDevice, target, invite.inviterName.take(40), now)
             database.local.putSetting(SettingsRepository.KEY_ACTIVE_COLLECTION, target)
             touchedLocal("household_key")

@@ -16,7 +16,6 @@ import com.houseofvino.data.io.ExportService
 import com.houseofvino.data.io.ImportService
 import com.houseofvino.data.repo.CellarRepository
 import com.houseofvino.data.repo.InsightsRepository
-import com.houseofvino.data.repo.JournalRepository
 import com.houseofvino.data.repo.LocationRepository
 import com.houseofvino.data.repo.PhotoRepository
 import com.houseofvino.data.repo.SettingsRepository
@@ -50,7 +49,6 @@ class AppGraph(
     val settings = SettingsRepository(db)
     val cellar = CellarRepository(db)
     val locations = LocationRepository(db)
-    val journal = JournalRepository(db, cellar)
     val wishlist = WishlistRepository(db, cellar)
     val photos = PhotoRepository(db)
     val search = SearchEngine(db)

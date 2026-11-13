@@ -10,7 +10,8 @@ object TextNormalizer {
     /** Normalised, space-separated tokens joined into one string. */
     fun normalize(text: String?): String = tokens(text).joinToString(" ")
 
-    fun tokens(text: String?): List<String> {
+    /** [expandAbbreviations] = false keeps tokens as typed (used for the still-being-typed prefix of a search). */
+    fun tokens(text: String?, expandAbbreviations: Boolean = true): List<String> {
         if (text.isNullOrBlank()) return emptyList()
         val folded = fold(text)
         val out = ArrayList<String>()
@@ -18,7 +19,7 @@ object TextNormalizer {
         fun flush() {
             if (current.isNotEmpty()) {
                 val token = current.toString()
-                out += ABBREVIATIONS[token] ?: token
+                out += if (expandAbbreviations) ABBREVIATIONS[token] ?: token else token
                 current.clear()
             }
         }

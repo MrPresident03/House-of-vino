@@ -53,16 +53,6 @@ object HvIcons {
         }
     }
 
-    val Journal: ImageVector by lazy {
-        line("Journal") {
-            moveTo(6f, 3.5f); lineTo(17f, 3.5f); curveTo(17.8f, 3.5f, 18.5f, 4.2f, 18.5f, 5f); lineTo(18.5f, 20.5f)
-            lineTo(7f, 20.5f); curveTo(6.2f, 20.5f, 5.5f, 19.8f, 5.5f, 19f); lineTo(5.5f, 4f)
-            moveTo(9f, 8f); lineTo(15f, 8f)
-            moveTo(9f, 11.5f); lineTo(15f, 11.5f)
-            moveTo(9f, 15f); lineTo(12.5f, 15f)
-        }
-    }
-
     val Wishlist: ImageVector by lazy {
         line("Wishlist") {
             moveTo(7f, 3.5f); lineTo(17f, 3.5f); lineTo(17f, 20.5f); lineTo(12f, 16.5f); lineTo(7f, 20.5f); close()

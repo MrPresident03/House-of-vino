@@ -74,6 +74,9 @@ SELECT * FROM household_key WHERE key_id = ?;
 insertKey:
 INSERT INTO household_key(key_id, collection_id, secret, created_at, retired_at) VALUES (?, ?, ?, ?, NULL);
 
+reviveKey:
+UPDATE household_key SET retired_at = NULL WHERE key_id = :keyId AND collection_id = :collectionId;
+
 retireKeys:
 UPDATE household_key SET retired_at = :now WHERE collection_id = :collectionId AND retired_at IS NULL;
 

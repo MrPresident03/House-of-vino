@@ -92,4 +92,14 @@ class QueryParserTest {
         assertNull(QueryParser.toFtsMatch(emptyList()))
         assertEquals("ab*", QueryParser.toFtsMatch(listOf("a\"b", "*", "")))
     }
+
+    @Test
+    fun repeatedFieldTermIsStillHandledAndLastTokenIsNotExpanded() {
+        val p = QueryParser.parse("producer:roulot producer:roulot")
+        assertEquals("", p.freeText)
+        assertEquals(setOf("roulot"), p.producers)
+        val q = QueryParser.parse("st emilion st")
+        assertEquals(listOf("saint", "emilion", "saint"), q.tokens)
+        assertEquals(listOf("saint", "emilion", "st"), q.prefixTokens)
+    }
 }

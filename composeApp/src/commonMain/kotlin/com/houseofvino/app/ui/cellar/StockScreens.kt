@@ -12,7 +12,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
@@ -79,13 +78,10 @@ data class StockActionState(
     val currency: CurrencyCode = CurrencyCode.EUR,
     val counterparty: String = "",
     val note: String = "",
-    val writeNote: Boolean = true,
     val counted: Int = 0,
     val error: String? = null,
     val busy: Boolean = false,
     val done: Boolean = false,
-    /** When drinking with a note, the editor takes over the consumption. */
-    val openNoteFor: Pair<String, String?>? = null,
 )
 
 class StockActionViewModel(graph: AppGraph, private val vintageId: String, action: String) : GraphViewModel(graph) {
@@ -114,12 +110,8 @@ class StockActionViewModel(graph: AppGraph, private val vintageId: String, actio
 
     fun submit() {
         val s = _state.value
+        if (s.busy) return
         val line = s.lines.getOrNull(s.selected) ?: return
-        if (s.action == "CONSUME" && s.writeNote) {
-            // The tasting editor records the consumption and the note in one transaction.
-            _state.update { it.copy(openNoteFor = line.lotId to line.locationId) }
-            return
-        }
         val amount = s.amount.takeIf { it.isNotBlank() }?.let { Money.parseOrNull(it, s.currency) ?: run {
             _state.update { st -> st.copy(error = "Enter an amount such as 120.00") }; return
         } }
@@ -166,12 +158,11 @@ class StockActionViewModel(graph: AppGraph, private val vintageId: String, actio
 }
 
 @Composable
-fun StockActionScreen(vintageId: String, action: String, onBack: () -> Unit, onDone: () -> Unit, onWriteNote: (lotId: String, locationId: String?) -> Unit) {
+fun StockActionScreen(vintageId: String, action: String, onBack: () -> Unit, onDone: () -> Unit) {
     val graph = appGraph()
     val vm = viewModel(key = "stock-$vintageId-$action") { StockActionViewModel(graph, vintageId, action) }
     val s by vm.state.collectAsState()
     LaunchedEffect(s.done) { if (s.done) onDone() }
-    LaunchedEffect(s.openNoteFor) { s.openNoteFor?.let { (lot, loc) -> vm.edit { it.copy(openNoteFor = null) }; onWriteNote(lot, loc) } }
 
     val title = when (action) { "TRANSFER" -> "Move bottles"; "ADJUST" -> "Count bottles"; "SELL" -> "Sell, give or write off"; else -> "Drink a bottle" }
     Column(Modifier.fillMaxSize()) {
@@ -223,17 +214,13 @@ fun StockActionScreen(vintageId: String, action: String, onBack: () -> Unit, onD
                 }
                 else -> {
                     QuantityStepper(s.quantity, { v -> vm.edit { it.copy(quantity = v) } }, "Bottles", min = 1, max = available.coerceAtLeast(1))
-                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.clickable { vm.edit { it.copy(writeNote = !it.writeNote) } }) {
-                        Checkbox(s.writeNote && s.quantity == 1, { on -> vm.edit { it.copy(writeNote = on) } }, enabled = s.quantity == 1)
-                        Text("Write a tasting note", style = Hv.type.body, color = Hv.colors.ink)
-                    }
                 }
             }
             HvTextField(s.note, { v -> vm.edit { it.copy(note = v) } }, "Note (optional)")
             s.error?.let { Text(it, style = Hv.type.bodyDense, color = Hv.colors.danger) }
             HvButton(
-                when (action) { "TRANSFER" -> "Move"; "ADJUST" -> "Save count"; "SELL" -> "Record"; else -> if (s.writeNote && s.quantity == 1) "Continue to note" else "Drink" },
-                { if (action == "CONSUME" && s.quantity > 1) vm.edit { it.copy(writeNote = false) }; vm.submit() },
+                when (action) { "TRANSFER" -> "Move"; "ADJUST" -> "Save count"; "SELL" -> "Record"; else -> "Drink" },
+                { vm.submit() },
                 Modifier.fillMaxWidth().padding(vertical = 16.dp).testTag("stock-submit"), enabled = !s.busy && (available > 0 || action == "ADJUST"),
             )
         }
@@ -269,7 +256,7 @@ class AddLotViewModel(graph: AppGraph, private val vintageId: String, private va
             if (f.acquiredOn.isNotBlank() && IsoDate.parseOrNull(f.acquiredOn) == null) put("acquiredOn", "Use YYYY-MM-DD")
         }
         if (errors.isNotEmpty()) { _errors.value = errors; return }
-        launchIo {
+        launchIoOnce {
             io {
                 graph.cellar.addLot(collectionId, vintageId, LotInput(
                     quantity = f.quantity, formatMl = f.formatMl, locationId = f.locationId, acquiredOn = IsoDate.parseOrNull(f.acquiredOn),
@@ -291,12 +278,13 @@ fun AddLotScreen(vintageId: String, wishlistItemId: String?, onBack: () -> Unit,
     val errors by vm.errors.collectAsState()
     val locations by vm.locations.collectAsState()
     val saved by vm.saved.collectAsState()
+    val submitting by vm.submitting.collectAsState()
     LaunchedEffect(saved) { if (saved) onSaved() }
     Column(Modifier.fillMaxSize()) {
         HvTopBar("Add purchase", onBack = onBack)
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).imePadding().padding(horizontal = 16.dp)) {
             PurchaseFields(f, errors, locations) { vm.edit(it) }
-            HvButton("Add bottles", vm::save, Modifier.fillMaxWidth().padding(vertical = 16.dp))
+            HvButton("Add bottles", vm::save, Modifier.fillMaxWidth().padding(vertical = 16.dp), enabled = !submitting)
         }
     }
 }
@@ -378,7 +366,7 @@ class ValuationsViewModel(graph: AppGraph, private val vintageId: String) : Grap
         if (source.value.isBlank()) { _error.value = "Say where the value comes from (e.g. auction result, merchant price)"; return }
         val date = IsoDate.parseOrNull(asOf.value) ?: run { _error.value = "Use YYYY-MM-DD"; return }
         _error.value = null
-        launchIo {
+        launchIoOnce(resetOnSuccess = true) {
             io { graph.cellar.addValuation(collectionId, vintageId, formatMl.value, money, source.value, date, null) }
             amount.value = ""; source.value = ""
             messenger.show("Value saved")
@@ -399,6 +387,7 @@ fun ValuationsScreen(vintageId: String, onBack: () -> Unit) {
     val asOf by vm.asOf.collectAsState()
     val formatMl by vm.formatMl.collectAsState()
     val error by vm.error.collectAsState()
+    val submitting by vm.submitting.collectAsState()
     Column(Modifier.fillMaxSize()) {
         HvTopBar("Value", onBack = onBack)
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).imePadding().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -412,7 +401,7 @@ fun ValuationsScreen(vintageId: String, onBack: () -> Unit) {
             HvTextField(source, { vm.source.value = it }, "Source", placeholder = "e.g. Auction result, merchant list price")
             DateField("As of", asOf, { vm.asOf.value = it }, null)
             error?.let { Text(it, color = Hv.colors.danger, style = Hv.type.bodyDense) }
-            HvButton("Save value", vm::add, Modifier.fillMaxWidth())
+            HvButton("Save value", vm::add, Modifier.fillMaxWidth(), enabled = !submitting)
             SectionHeader("History", Modifier.padding(start = 0.dp))
             list.forEach { v ->
                 Row(verticalAlignment = Alignment.CenterVertically) {

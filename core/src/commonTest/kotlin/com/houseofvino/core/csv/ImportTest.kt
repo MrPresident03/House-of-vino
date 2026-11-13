@@ -102,6 +102,41 @@ class ImportTest {
         assertTrue(result.issues.any { it.row == 2 && it.severity == Severity.WARNING })
     }
 
+    private fun parse(csv: String): ParseResult {
+        val table = Csv.read(csv)
+        return ImportParser(ColumnMapping.suggest(table.header), ImportOptions(CurrencyCode.EUR)).parse(table)
+    }
+
+    @Test
+    fun issueRowNumbersUseTheTrueSourceLine() {
+        val result = parse("Producer,Quantity\nA,1\n\n\nB,x\n")
+        assertEquals(setOf(5), result.errorRows)
+    }
+
+    @Test
+    fun exportGuardApostropheIsStrippedOnImport() {
+        val result = parse("Producer,Wine\n'- corked,'tis\n")
+        assertEquals("- corked", result.records.single().producer)
+        assertEquals("'tis", result.records.single().name)
+    }
+
+    @Test
+    fun styleMatchesWholeWordsOnly() {
+        assertNull(ImportParser.parseStyle("Imported by Acme Wines"))
+        assertNull(ImportParser.parseStyle("Product of Portugal"))
+        assertEquals(WineStyle.FORTIFIED, ImportParser.parseStyle("Vintage Port"))
+        assertEquals(WineStyle.SWEET, ImportParser.parseStyle("Late-harvest"))
+        assertEquals(WineStyle.SPARKLING, ImportParser.parseStyle("White - Sparkling"))
+        assertEquals(WineStyle.STILL, ImportParser.parseStyle("Dry"))
+    }
+
+    @Test
+    fun priceTimesQuantityOverflowIsARowErrorNotACrash() {
+        val result = parse("Producer,Quantity,Price,Total\nA,100,1000000000000000.00,5.00\nB,1,10.00,10.00\n")
+        assertEquals(setOf(2), result.errorRows)
+        assertEquals(listOf("B"), result.records.map { it.producer })
+    }
+
     @Test
     fun missingRequiredMappingBlocksImport() {
         val table = Csv.read("Wine,Vintage\nX,2010")

@@ -364,7 +364,7 @@ class SearchEngine(private val database: LocalDatabase) {
     /** Combines free-text tokens and inline field filters into one FTS4 MATCH expression. */
     internal fun ftsMatch(parsed: QueryParser.Parsed): String? {
         val parts = ArrayList<String>()
-        QueryParser.toFtsMatch(parsed.tokens)?.let(parts::add)
+        QueryParser.toFtsMatch(parsed.prefixTokens)?.let(parts::add)
         fun column(col: String, values: Set<String>) = values.forEach { v ->
             TextNormalizer.tokens(v).forEach { t -> parts += "$col:$t*" }
         }

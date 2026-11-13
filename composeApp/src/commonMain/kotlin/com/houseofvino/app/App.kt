@@ -28,19 +28,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavDestination.Companion.hierarchy
-import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.houseofvino.app.ui.common.LocalAppGraph
 import com.houseofvino.app.ui.design.Hv
 import com.houseofvino.app.ui.design.HvIcons
+import com.houseofvino.app.ui.design.Appearance
+import com.houseofvino.app.ui.design.FontChoice
 import com.houseofvino.app.ui.design.HvTheme
+import com.houseofvino.app.ui.design.ThemeStyle
 import com.houseofvino.app.ui.design.LocalMoneyFormat
 import com.houseofvino.app.ui.navigation.AppNavHost
 import com.houseofvino.app.ui.navigation.CellarRoute
 import com.houseofvino.app.ui.navigation.FirstRunRoute
-import com.houseofvino.app.ui.navigation.JournalRoute
 import com.houseofvino.app.ui.navigation.MoreRoute
+import com.houseofvino.app.ui.navigation.RacksRoute
 import com.houseofvino.app.ui.navigation.SearchRoute
 import com.houseofvino.app.ui.navigation.WishlistRoute
 import com.houseofvino.data.repo.ThemePreference
@@ -51,7 +53,7 @@ private data class Tab(val route: Any, val type: KClass<*>, val label: String, v
 private val tabs = listOf(
     Tab(CellarRoute, CellarRoute::class, "Cellar", HvIcons.Cellar),
     Tab(SearchRoute, SearchRoute::class, "Search", Icons.Filled.Search),
-    Tab(JournalRoute, JournalRoute::class, "Journal", HvIcons.Journal),
+    Tab(RacksRoute, RacksRoute::class, "Racks", HvIcons.Grid),
     Tab(WishlistRoute, WishlistRoute::class, "Wishlist", HvIcons.Wishlist),
     Tab(MoreRoute, MoreRoute::class, "More", Icons.Filled.MoreVert),
 )
@@ -64,8 +66,10 @@ fun App(graph: AppGraph) {
         graph.db.changes.collect { if ("setting" in it) themeVersion++ }
     }
     val preference = remember(themeVersion) { graph.settings.preferences().theme }
+    val style = remember(themeVersion) { ThemeStyle.of(graph.settings.get(Appearance.KEY_THEME_STYLE)) }
+    val font = remember(themeVersion) { FontChoice.of(graph.settings.get(Appearance.KEY_FONT)) }
     CompositionLocalProvider(LocalAppGraph provides graph, LocalMoneyFormat provides graph.platform.moneyFormat()) {
-        HvTheme(preference = preference, reducedMotion = graph.platform.prefersReducedMotion()) {
+        HvTheme(preference = preference, reducedMotion = graph.platform.prefersReducedMotion(), style = style, font = font) {
             AppScaffold(graph)
         }
     }
@@ -98,7 +102,7 @@ private fun AppScaffold(graph: AppGraph) {
                             selected = selected,
                             onClick = {
                                 nav.navigate(tab.route) {
-                                    popUpTo(nav.graph.findStartDestination().id) { saveState = true }
+                                    popUpTo<CellarRoute> { saveState = true }
                                     launchSingleTop = true
                                     restoreState = true
                                 }

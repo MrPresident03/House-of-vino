@@ -15,6 +15,9 @@ import com.houseofvino.data.repo.VintageExistsException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.IO
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
@@ -58,6 +61,27 @@ abstract class GraphViewModel(protected val graph: AppGraph) : ViewModel() {
                 if (e is kotlinx.coroutines.CancellationException) throw e
                 if (onError != null) onError(e) else messenger.show(e.userMessage())
             }
+        }
+    }
+
+    private val _submitting = MutableStateFlow(false)
+
+    /** True while a write started with [launchIoOnce] is running; screens disable their submit button on it. */
+    val submitting: StateFlow<Boolean> = _submitting.asStateFlow()
+
+    /**
+     * Like [launchIo], but a second call while the first is still running does nothing (double tap guard).
+     * Reset on failure; on success only when [resetOnSuccess] (leave it off when the screen closes afterwards).
+     */
+    protected fun launchIoOnce(resetOnSuccess: Boolean = false, onError: ((Throwable) -> Unit)? = null, block: suspend () -> Unit) {
+        if (_submitting.value) return
+        _submitting.value = true
+        launchIo(onError = { e ->
+            _submitting.value = false
+            if (onError != null) onError(e) else messenger.show(e.userMessage())
+        }) {
+            block()
+            if (resetOnSuccess) _submitting.value = false
         }
     }
 
