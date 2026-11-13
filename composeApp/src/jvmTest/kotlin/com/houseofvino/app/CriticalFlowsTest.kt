@@ -148,7 +148,9 @@ class CriticalFlowsTest {
         waitFor(hasTestTag("varietal-row-Syrah"))
         click(onNodeWithTag("varietal-row-Syrah"))
         click(onNodeWithTag("varietal-done"))
+        waitForText("Syrah") // the form shows the grape under its usual name
 
+        onNodeWithText("Vintage year").performTextInput("2018")
         click(onNodeWithTag("save-wine").performScrollTo())
         waitUntil(timeoutMillis = timeout) { graph.db.queryLong("SELECT count(*) FROM wine_grape WHERE grape = 'Syrah'") == 1L }
         assertEquals(1L, graph.db.queryLong("SELECT count(*) FROM wine WHERE color = 'RED'"), "colour filled from the grape")

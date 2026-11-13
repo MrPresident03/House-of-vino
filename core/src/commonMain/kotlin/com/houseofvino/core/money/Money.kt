@@ -163,8 +163,9 @@ internal object DecimalText {
         val prefix = s.substring(0, first).filterNot { it.isSpaceLike() }
         val suffix = s.substring(last + 1).filterNot { it.isSpaceLike() }
         val isCurrencyChar = { ch: Char -> ch.isLetter() || ch.category == CharCategory.CURRENCY_SYMBOL }
-        require(suffix.length <= 4 && suffix.all(isCurrencyChar)) { "Not a number: $input" }
-        require(prefix.length <= 5 && prefix.all { isCurrencyChar(it) || it == '-' || it == '+' }) { "Not a number: $input" }
+        // A currency is a symbol, a three-letter code, or both ("US$"): longer words are not a currency.
+        require(suffix.length <= 4 && suffix.count { it.isLetter() } <= 3 && suffix.all(isCurrencyChar)) { "Not a number: $input" }
+        require(prefix.length <= 5 && prefix.count { it.isLetter() } <= 3 && prefix.all { isCurrencyChar(it) || it == '-' || it == '+' }) { "Not a number: $input" }
         val signs = prefix.filter { it == '-' || it == '+' }
         require(signs.length <= 1) { "Not a number: $input" }
         val core = s.substring(first, last + 1)
