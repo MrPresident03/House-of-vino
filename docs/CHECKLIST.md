@@ -63,13 +63,15 @@ of this file has been done on real phones.
 - [~] Cellar list/grid with paging, sort, quick filters, all UI states
 - [~] Vintage detail; wine/vintage editor with validation
 - [~] Add purchase (lot); consume/sell/gift/loss/adjust; transfer; undo via reversal (T: UI) — logic tested; screen only partly covered by UI tests
-- [~] Locations tree, grid slots
+- [~] Locations tree, grid slots; Racks tab in the bottom bar opens the grid directly
+- [~] Appearance: five colour themes and five font pairings (T: contrast for every palette)
 - [~] Offline banner, sync status
 
 ## M6 Feature screens
 - [~] Search UI: scopes, filters sheet, saved searches, recent queries, grid/list (T: UI) — logic tested; screen only partly covered by UI tests
 - [~] Wishlist: CRUD, merchant links, status, convert to inventory (T) — logic tested; screen only partly covered by UI tests
-- [~] Tasting journal: structured + free notes, rating, photos, occasion, pairing (T) — logic tested; screen only partly covered by UI tests
+- [x] Tasting journal removed from the UI in 0.4 (table and sync rules kept, unused)
+- [~] Varietal picker: 540 grape varieties with synonyms, search, custom entries (T: list and search)
 - [~] Insights: totals, cost, value with provenance, windows, consumption, breakdowns (T) — logic tested; screen only partly covered by UI tests
 - [~] CSV import flow (pick, map, validate, duplicates, commit, report) and exports (T) — logic tested; screen only partly covered by UI tests
 - [~] Settings: sharing, currency & rates, preferences, privacy, notifications, backup, erase this phone
@@ -86,7 +88,7 @@ of this file has been done on real phones.
 - [ ] Quantities, purchases, batches, locations
 - [ ] Consumption and transfers without corruption
 - [ ] Search/filter large collections
-- [ ] Wishlist and tasting history
+- [ ] Wishlist
 - [ ] Import/export
 - [ ] Offline + reliable sync
 - [ ] Private collections + household permissions
@@ -97,7 +99,9 @@ of this file has been done on real phones.
 - [ ] Barcode scan of a real wine bottle; unknown barcode falls back to manual entry
 - [ ] Label capture and OCR on a real label; every suggested field editable before saving
 - [ ] CSV import from the Files app / document picker; export opens the share sheet
-- [ ] Photo from the library attached to a tasting note; shows after app restart
+- [ ] Photo from the library attached to a wine; shows after app restart
+- [ ] Racks tab: place and remove a bottle; switch racks; set up the first rack from the empty state
+- [ ] Each colour theme in light and dark; each font pairing; choice survives an app restart
 - [ ] Airplane mode: add, drink and move bottles; reconnect; changes sync once, no duplicates
 - [ ] Pair two real phones (iPhone ↔ Android) by QR; both show the same safety code
 - [ ] Send a .hovsync file through Messages/WhatsApp/email and receive it on the other phone

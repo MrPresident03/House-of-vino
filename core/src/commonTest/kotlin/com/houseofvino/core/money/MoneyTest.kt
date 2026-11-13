@@ -53,6 +53,17 @@ class MoneyTest {
     }
 
     @Test
+    fun rejectsNumbersMixedWithOtherText() {
+        listOf("45 (list 60)", "1e5", "45 60", "list 45", "12 abc 34", "EUR USD 45").forEach {
+            assertNull(Money.parseOrNull(it, eur), "should reject \"$it\"")
+        }
+        assertEquals(4500L, Money.parse("45 EUR", eur).minor)
+        assertEquals(4500L, Money.parse("$ 45", eur).minor)
+        assertEquals(123456L, Money.parse("€1.234,56", eur).minor)
+        assertEquals(-4500L, Money.parse("-€45", eur).minor)
+    }
+
+    @Test
     fun rejectsGarbage() {
         listOf("", "abc", "1.2.3,4", "12-3", "1,2,3", "12,34,567.00", "--5").forEach {
             assertNull(Money.parseOrNull(it, eur), "should reject \"$it\"")
@@ -150,6 +161,14 @@ class ExchangeRateTest {
         assertEquals(Money(1920, eur), result.total)
         assertEquals(1, result.ratesUsed.size)
         assertEquals(mapOf(CurrencyCode.GBP to Money(500, CurrencyCode.GBP)), result.unconverted)
+    }
+
+    @Test
+    fun sameDayRatesResolveIdenticallyInAnyOrder() {
+        val day = IsoDate.of(2026, 1, 1)
+        val a = ExchangeRate(eur, usd, ExchangeRate.parseRate("1.10"), day, "a")
+        val b = ExchangeRate(eur, usd, ExchangeRate.parseRate("1.20"), day, "b")
+        assertEquals(CurrencyConverter(listOf(a, b)).rateFor(eur, usd), CurrencyConverter(listOf(b, a)).rateFor(eur, usd))
     }
 
     @Test

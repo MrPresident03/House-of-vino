@@ -132,6 +132,58 @@ class HouseholdSyncTest {
     }
 
     @Test
+    fun halvesOfALinkedPairChangedOnDifferentPhonesMergeAsAUnit() {
+        val (a, b) = pair()
+        val v = a.wine("Château Palmer", 2012, 2)
+        b.join(a.share()); b.receive(a.send()); a.receive(b.send())
+
+        tick()
+        a.app.cellar.updateVintage(v, VintageInput(VintageYear.Year(2012), drinkFrom = 2030))
+        tick()
+        b.app.cellar.updateVintage(v, VintageInput(VintageYear.Year(2012), drinkUntil = 2020))
+        val fromBen = b.send()
+        val fromAna = a.send()
+        // Field by field this would be "from 2030 until 2020", which the vintage table refuses, and
+        // the whole file would fail to import on both phones for ever.
+        a.receive(fromBen); b.receive(fromAna)
+
+        assertEquals(a.dump(), b.dump())
+        val vintage = a.app.cellar.vintage(v)!!
+        assertNull(vintage.drinkFrom, "Ben's later edit wins as a whole window")
+        assertEquals(2020, vintage.drinkUntil)
+        assertEquals(1, a.openConflicts().size)
+        assertEquals(1, b.openConflicts().size)
+
+        // The phones keep syncing afterwards.
+        tick()
+        a.app.cellar.updateVintage(v, VintageInput(VintageYear.Year(2012), drinkFrom = 2018, drinkUntil = 2020))
+        b.receive(a.send()); a.receive(b.send())
+        assertEquals(a.dump(), b.dump())
+        assertEquals(2018, b.app.cellar.vintage(v)!!.drinkFrom)
+    }
+
+    @Test
+    fun resizingAGridOnOnePhoneAfterTheOtherRemovedItStaysValid() {
+        val (a, b) = pair()
+        val rack = a.app.locations.create(a.cid, LocationInput("Rack", LocationKind.RACK, gridRows = 4, gridCols = 6))
+        b.join(a.share()); b.receive(a.send()); a.receive(b.send())
+
+        tick()
+        b.app.locations.update(rack, LocationInput("Rack", LocationKind.RACK)) // Ben removes the grid
+        tick()
+        a.app.locations.update(rack, LocationInput("Rack", LocationKind.RACK, gridRows = 5, gridCols = 6)) // Ana adds a row
+        val fromBen = b.send()
+        val fromAna = a.send()
+        // Field by field this would be "5 rows, no positions", which the location table refuses.
+        a.receive(fromBen); b.receive(fromAna)
+
+        assertEquals(a.dump(), b.dump())
+        val merged = b.app.locations.byId(rack)!!
+        assertEquals(5, merged.gridRows, "Ana's later edit wins as a whole grid")
+        assertEquals(6, merged.gridCols)
+    }
+
+    @Test
     fun sameFieldChangedOnBothPhonesKeepsTheLaterEditAndAsksTheUser() {
         val (a, b) = pair()
         val v = a.wine("Château Lynch-Bages", 2010, 2)

@@ -216,7 +216,7 @@ class ExportViewModel(graph: AppGraph) : GraphViewModel(graph) {
         val csv = io {
             when (kind) {
                 "inventory" -> graph.exporter.inventoryCsv(collectionId)
-                else -> graph.exporter.financialCsv(collectionId)
+                else -> graph.exporter.financialCsv(collectionId, graph.platform.utcOffsetMinutes())
             }
         }
         val error = graph.platform.shareText(graph.exporter.suggestedFileName(kind, today), "text/csv", csv)

@@ -153,15 +153,17 @@ class LocationRepository(private val database: LocalDatabase) {
         val stock = inventory.stockBucket(lotId, locationId).executeAsOneOrNull()?.toInt() ?: 0
         val placed = inventory.slotCountForLotAt(lotId, locationId).executeAsOne().toInt()
         if (placed >= stock) throw LocationInUseException("All $stock bottle(s) of this purchase here already have a position")
-        val existing = inventory.slotAt(locationId, row.toLong(), col.toLong()).executeAsOneOrNull()
-        if (existing?.lot_id != null) throw LocationInUseException("That position is taken")
+        val atPosition = inventory.slotAt(locationId, row.toLong(), col.toLong()).executeAsList()
+        val existing = atPosition.firstOrNull()
+        if (atPosition.any { it.lot_id != null }) throw LocationInUseException("That position is taken")
         upsertSlot(existing?.id, loc, row, col, lotId)
     }
 
     fun clearPosition(locationId: String, row: Int, col: Int) = database.write {
-        val existing = inventory.slotAt(locationId, row.toLong(), col.toLong()).executeAsOneOrNull() ?: return@write
-        inventory.setSlotLot(null, now, existing.id)
-        touched(SyncTables.SLOT, existing.id)
+        for (existing in inventory.slotAt(locationId, row.toLong(), col.toLong()).executeAsList()) {
+            inventory.setSlotLot(null, now, existing.id)
+            touched(SyncTables.SLOT, existing.id)
+        }
     }
 
     private fun WriteScope.upsertSlot(slotId: String?, loc: Location, row: Int, col: Int, lotId: String?) {

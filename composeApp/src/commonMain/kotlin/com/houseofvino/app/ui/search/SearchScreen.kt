@@ -143,12 +143,18 @@ class SearchViewModel(graph: AppGraph) : GraphViewModel(graph) {
 
     fun setText(t: String) { _state.update { it.copy(text = t) }; run(debounce = true) }
     fun setScope(s: SearchScope) {
-        _state.update { it.copy(scope = s, recent = graph.settings.recentQueries(s)) }
+        _state.update {
+            it.copy(scope = s, recent = graph.settings.recentQueries(s), cellar = emptyList(), wishlist = emptyList(), discover = emptyList(),
+                total = 0, corrections = emptyMap(), discoverNote = null)
+        }
         run(debounce = false)
     }
     fun setFilters(f: SearchFilters) { _state.update { it.copy(filters = f) }; run(debounce = false) }
     fun setSort(s: SortOrder) { _state.update { it.copy(sort = s) }; run(debounce = false) }
-    fun clear() { _state.update { it.copy(text = "", filters = SearchFilters(), cellar = emptyList(), wishlist = emptyList(), discover = emptyList(), total = 0, corrections = emptyMap()) } }
+    fun clear() {
+        job?.cancel()
+        _state.update { it.copy(text = "", filters = SearchFilters(), cellar = emptyList(), wishlist = emptyList(), discover = emptyList(), total = 0, corrections = emptyMap(), searching = false) }
+    }
 
     fun applySaved(s: SavedSearch) {
         // Searches saved by older versions may use the retired journal scope or rating/tasted sorts.
@@ -183,7 +189,7 @@ class SearchViewModel(graph: AppGraph) : GraphViewModel(graph) {
             if (debounce) delay(180)
             val s = _state.value
             if (s.text.isBlank() && s.filters.activeCount == 0 && s.scope != SearchScope.WISHLIST) {
-                _state.update { it.copy(cellar = emptyList(), discover = emptyList(), total = 0, corrections = emptyMap(), searching = false) }
+                _state.update { it.copy(cellar = emptyList(), wishlist = emptyList(), discover = emptyList(), total = 0, corrections = emptyMap(), searching = false) }
                 return@launch
             }
             _state.update { it.copy(searching = true, error = null) }

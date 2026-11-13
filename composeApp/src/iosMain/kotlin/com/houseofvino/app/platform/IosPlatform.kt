@@ -3,6 +3,9 @@ package com.houseofvino.app.platform
 import com.houseofvino.core.money.MoneyFormatStyle
 import com.houseofvino.core.time.IsoDate
 import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
+import kotlinx.coroutines.withContext
 import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.useContents
 import kotlinx.cinterop.usePinned
@@ -114,8 +117,11 @@ class IosPlatform : PlatformServices {
     }
 
     override suspend fun shareText(fileName: String, mimeType: String, content: String): String? {
+        // Writing a large sync file must not block the main thread (same as the Android implementation).
         val path = "${dir(NSCachesDirectory, "exports")}/$fileName"
-        val ok = (NSString.create(string = content) as NSString).writeToFile(path, atomically = true, encoding = NSUTF8StringEncoding, error = null)
+        val ok = withContext(Dispatchers.IO) {
+            (NSString.create(string = content) as NSString).writeToFile(path, atomically = true, encoding = NSUTF8StringEncoding, error = null)
+        }
         if (!ok) return "Couldn't write the export file."
         dispatch_async(dispatch_get_main_queue()) {
             val vc = UIActivityViewController(activityItems = listOf(NSURL.fileURLWithPath(path)), applicationActivities = null)

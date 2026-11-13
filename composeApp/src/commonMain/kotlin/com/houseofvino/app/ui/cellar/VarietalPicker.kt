@@ -91,10 +91,12 @@ internal fun inferredGrapeColor(grapes: String): WineColor? {
     return colors.singleOrNull()
 }
 
-/** Toggles a grape and, if the wine has no colour yet, fills it in from the grapes. Never overrides a chosen colour. */
+/** Toggles a grape and re-infers the colour while it is empty or was itself inferred. Never overrides a chosen colour. */
 internal fun WineForm.withGrapeToggled(name: String): WineForm {
     val updated = toggleGrape(grapes, name)
-    return copy(grapes = updated, color = color ?: inferredGrapeColor(updated))
+    if (color != null && !colorInferred) return copy(grapes = updated)
+    val inferred = inferredGrapeColor(updated)
+    return copy(grapes = updated, color = inferred, colorInferred = inferred != null)
 }
 
 private fun selectedGrapeNames(grapes: String): List<String> = parseGrapesOrEmpty(grapes).map { it.grape }

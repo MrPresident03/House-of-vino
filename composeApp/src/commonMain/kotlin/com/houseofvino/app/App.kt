@@ -28,7 +28,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavDestination.Companion.hierarchy
-import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.houseofvino.app.ui.common.LocalAppGraph
@@ -103,7 +102,7 @@ private fun AppScaffold(graph: AppGraph) {
                             selected = selected,
                             onClick = {
                                 nav.navigate(tab.route) {
-                                    popUpTo(nav.graph.findStartDestination().id) { saveState = true }
+                                    popUpTo<CellarRoute> { saveState = true }
                                     launchSingleTop = true
                                     restoreState = true
                                 }

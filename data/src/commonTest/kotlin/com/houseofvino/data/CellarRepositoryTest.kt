@@ -160,4 +160,53 @@ class CellarRepositoryTest {
         }
         assertEquals(0, app.journalCount())
     }
+
+    @Test
+    fun duplicateTagRowsFromSyncDoNotBreakTagging() {
+        app.cellar.addWine(c, WineTarget.NewWine(margaux), VintageInput(VintageYear.Year(2015)), LotInput(quantity = 1), tags = listOf("gift"))
+        val firstTag = app.db.catalog.tagByName(c, "gift").executeAsList().single().id
+        app.clock.advance()
+        app.db.catalog.insertTag("00000000-0000-4000-8000-0000000000ff", c, "gift", null, app.clock.now, app.clock.now)
+        val v2 = app.cellar.addWine(c, WineTarget.NewWine(margaux.copy(producer = "Other", name = "Other")), VintageInput(VintageYear.Year(2016)),
+            LotInput(quantity = 1), tags = listOf("Gift"))
+        assertEquals(2, app.cellar.allTags(c).first { it.first.id == firstTag }.second)
+        assertEquals(listOf("gift"), app.cellar.vintageDetail(v2)!!.tags.map { it.name })
+    }
+
+    @Test
+    fun duplicateSlotRowsAtOnePositionAreHandled() {
+        val rack = location("Rack A", rows = 2, cols = 2)
+        val v = app.cellar.addWine(c, WineTarget.NewWine(margaux), VintageInput(VintageYear.Year(2015)), LotInput(quantity = 2, locationId = rack))
+        val lot = app.cellar.stockLines(v).single().lotId
+        val now = app.clock.now
+        app.db.inventory.insertSlot("00000000-0000-4000-8000-0000000000a1", c, rack, 1L, 1L, null, now, now)
+        app.db.inventory.insertSlot("00000000-0000-4000-8000-0000000000a2", c, rack, 1L, 1L, null, now, now)
+        app.locations.placeBottle(rack, 1, 1, lot) // two empty rows at the position: no crash
+        assertFailsWith<LocationInUseException> { app.locations.placeBottle(rack, 1, 1, lot) }
+        // a partner's row with a bottle in the same position: still "taken", and clearing empties every row
+        app.db.inventory.insertSlot("00000000-0000-4000-8000-0000000000a3", c, rack, 1L, 1L, lot, now, now)
+        assertFailsWith<LocationInUseException> { app.locations.placeBottle(rack, 1, 1, lot) }
+        app.locations.clearPosition(rack, 1, 1)
+        assertTrue(app.db.inventory.slotAt(rack, 1L, 1L).executeAsList().all { it.lot_id == null })
+    }
+
+    @Test
+    fun mergeVintagesMovesPhotosDedupesTagsAndRequiresSameWine() {
+        val v15 = app.cellar.addWine(c, WineTarget.NewWine(margaux), VintageInput(VintageYear.Year(2015)), LotInput(quantity = 1),
+            tags = listOf("Gift", "Special"))
+        val wineId = app.cellar.vintage(v15)!!.wineId
+        val v16 = app.cellar.addWine(c, WineTarget.ExistingWine(wineId), VintageInput(VintageYear.Year(2016)), LotInput(quantity = 1),
+            tags = listOf("Gift"))
+        val photoId = "00000000-0000-4000-8000-0000000000b1"
+        app.db.journal.insertPhoto(photoId, c, "VINTAGE", v16, null, null, "image/jpeg", 10L, 10L, 100L, app.clock.now, app.clock.now)
+        app.cellar.setLabelPhoto(v16, photoId)
+        val other = app.cellar.addWine(c, WineTarget.NewWine(margaux.copy(producer = "Other", name = "Other")), VintageInput(VintageYear.Year(2015)),
+            LotInput(quantity = 1))
+        assertFailsWith<IllegalArgumentException> { app.cellar.mergeVintages(other, v15, confirmDifferentVintage = true) }
+        app.clock.advance()
+        app.cellar.mergeVintages(v16, v15, confirmDifferentVintage = true)
+        assertEquals(listOf(photoId), app.db.journal.photosFor("VINTAGE", v15).executeAsList().map { it.id })
+        assertEquals(photoId, app.db.catalog.vintageById(v15).executeAsOne().label_photo_id)
+        assertEquals(listOf("Gift", "Special"), app.cellar.vintageDetail(v15)!!.tags.map { it.name })
+    }
 }

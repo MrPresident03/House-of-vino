@@ -25,6 +25,7 @@ import com.houseofvino.app.ui.cellar.ScanPrefill
 import com.houseofvino.app.ui.common.GraphViewModel
 import com.houseofvino.app.ui.common.appGraph
 import com.houseofvino.app.ui.common.confidenceText
+import com.houseofvino.app.ui.common.userMessage
 import com.houseofvino.app.ui.design.ButtonKind
 import com.houseofvino.app.ui.design.Hv
 import com.houseofvino.app.ui.design.HvButton
@@ -92,8 +93,9 @@ class ScanViewModel(graph: AppGraph) : GraphViewModel(graph) {
     }
 
     private suspend fun withCatalogue(r: ScanState.Results, text: String): ScanState.Results {
-        val catalogue = graph.catalogue
-        if (!catalogue.available || text.isBlank()) return r
+        // First touch copies the bundled pack, so keep it off the main thread.
+        val (catalogue, available) = io { graph.catalogue.let { it to it.available } }
+        if (!available || text.isBlank()) return r
         val year = (r.read.vintage?.value as? VintageYear.Year)?.year
         val matches = io { catalogue.match(text, year) }
         val auto = matches.firstOrNull()?.takeIf { it.confidence == Confidence.MEDIUM }
@@ -110,7 +112,10 @@ class ScanViewModel(graph: AppGraph) : GraphViewModel(graph) {
     fun onResult(output: ScanOutput) {
         if (_state.value != ScanState.Camera) return
         _state.value = ScanState.Working
-        launchIo {
+        launchIo(onError = { e ->
+            _state.value = ScanState.Camera
+            messenger.show(e.userMessage())
+        }) {
             existing = io {
                 db.catalog.identityIndex(collectionId).executeAsList().map {
                     ExistingVintage(it.vintage_id, it.wine_id, it.producer, it.name, VintageYear.fromStorage(it.vintage_kind, it.year?.toInt()))
@@ -187,7 +192,7 @@ fun ScanScreen(
                     style = Hv.type.label, color = Hv.colors.ink, modifier = Modifier.padding(16.dp))
             }
             ScanState.PermissionDenied -> PermissionDenied("Camera", "House of Vino uses the camera only to read barcodes and labels, on this device.",
-                graph.platform::openAppSettings, onManual)
+                graph.platform::openAppSettings, onManual, onRetry = vm::retry)
             ScanState.Unavailable -> Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("Scanning isn't available on this device.", style = Hv.type.body, color = Hv.colors.ink)
                 HvButton("Enter details", onManual)

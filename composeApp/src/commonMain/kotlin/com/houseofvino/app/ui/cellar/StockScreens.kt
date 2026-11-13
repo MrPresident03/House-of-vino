@@ -110,6 +110,7 @@ class StockActionViewModel(graph: AppGraph, private val vintageId: String, actio
 
     fun submit() {
         val s = _state.value
+        if (s.busy) return
         val line = s.lines.getOrNull(s.selected) ?: return
         val amount = s.amount.takeIf { it.isNotBlank() }?.let { Money.parseOrNull(it, s.currency) ?: run {
             _state.update { st -> st.copy(error = "Enter an amount such as 120.00") }; return
@@ -255,7 +256,7 @@ class AddLotViewModel(graph: AppGraph, private val vintageId: String, private va
             if (f.acquiredOn.isNotBlank() && IsoDate.parseOrNull(f.acquiredOn) == null) put("acquiredOn", "Use YYYY-MM-DD")
         }
         if (errors.isNotEmpty()) { _errors.value = errors; return }
-        launchIo {
+        launchIoOnce {
             io {
                 graph.cellar.addLot(collectionId, vintageId, LotInput(
                     quantity = f.quantity, formatMl = f.formatMl, locationId = f.locationId, acquiredOn = IsoDate.parseOrNull(f.acquiredOn),
@@ -277,12 +278,13 @@ fun AddLotScreen(vintageId: String, wishlistItemId: String?, onBack: () -> Unit,
     val errors by vm.errors.collectAsState()
     val locations by vm.locations.collectAsState()
     val saved by vm.saved.collectAsState()
+    val submitting by vm.submitting.collectAsState()
     LaunchedEffect(saved) { if (saved) onSaved() }
     Column(Modifier.fillMaxSize()) {
         HvTopBar("Add purchase", onBack = onBack)
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).imePadding().padding(horizontal = 16.dp)) {
             PurchaseFields(f, errors, locations) { vm.edit(it) }
-            HvButton("Add bottles", vm::save, Modifier.fillMaxWidth().padding(vertical = 16.dp))
+            HvButton("Add bottles", vm::save, Modifier.fillMaxWidth().padding(vertical = 16.dp), enabled = !submitting)
         }
     }
 }
@@ -364,7 +366,7 @@ class ValuationsViewModel(graph: AppGraph, private val vintageId: String) : Grap
         if (source.value.isBlank()) { _error.value = "Say where the value comes from (e.g. auction result, merchant price)"; return }
         val date = IsoDate.parseOrNull(asOf.value) ?: run { _error.value = "Use YYYY-MM-DD"; return }
         _error.value = null
-        launchIo {
+        launchIoOnce(resetOnSuccess = true) {
             io { graph.cellar.addValuation(collectionId, vintageId, formatMl.value, money, source.value, date, null) }
             amount.value = ""; source.value = ""
             messenger.show("Value saved")
@@ -385,6 +387,7 @@ fun ValuationsScreen(vintageId: String, onBack: () -> Unit) {
     val asOf by vm.asOf.collectAsState()
     val formatMl by vm.formatMl.collectAsState()
     val error by vm.error.collectAsState()
+    val submitting by vm.submitting.collectAsState()
     Column(Modifier.fillMaxSize()) {
         HvTopBar("Value", onBack = onBack)
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).imePadding().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -398,7 +401,7 @@ fun ValuationsScreen(vintageId: String, onBack: () -> Unit) {
             HvTextField(source, { vm.source.value = it }, "Source", placeholder = "e.g. Auction result, merchant list price")
             DateField("As of", asOf, { vm.asOf.value = it }, null)
             error?.let { Text(it, color = Hv.colors.danger, style = Hv.type.bodyDense) }
-            HvButton("Save value", vm::add, Modifier.fillMaxWidth())
+            HvButton("Save value", vm::add, Modifier.fillMaxWidth(), enabled = !submitting)
             SectionHeader("History", Modifier.padding(start = 0.dp))
             list.forEach { v ->
                 Row(verticalAlignment = Alignment.CenterVertically) {

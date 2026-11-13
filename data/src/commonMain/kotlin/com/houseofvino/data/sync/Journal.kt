@@ -84,10 +84,25 @@ class Journal(private val database: LocalDatabase) {
         }
         val state = loadState(table.name, id)
         val values = row.filterKeys { it !in NOT_SYNCED }.mapValues { toValue(it.value) }
-        val writes = FieldMerge.localWrites(state, values)
+        val writes = withLinkedColumns(table.name, state, values, FieldMerge.localWrites(state, values))
         if (writes.isEmpty()) return
         val hlc = append(collection, table.name, id, writes = writes.map(::encodeWrite))
         saveState(table.name, id, FieldMerge.receive(state, hlc, writes).state)
+    }
+
+    /**
+     * Columns tied together by a table CHECK (a drinking window, a price and its currency, a grid's
+     * rows and positions) are journaled together whenever one of them changes. They then win or
+     * lose a merge as a unit, so two phones editing different halves can never combine into a row
+     * the database refuses.
+     */
+    private fun withLinkedColumns(table: String, state: Map<String, FieldState>, values: Map<String, SyncValue>, writes: List<FieldWrite>): List<FieldWrite> {
+        val groups = LINKED_COLUMNS[table] ?: return writes
+        if (writes.isEmpty()) return writes
+        val written = writes.mapTo(HashSet()) { it.column }
+        val extra = LinkedHashSet<String>()
+        for (group in groups) if (group.any { it in written }) group.filterTo(extra) { it !in written && it in values }
+        return writes + extra.map { FieldWrite(it, values.getValue(it), state[it]?.clock) }
     }
 
     /** Journals every row of [collectionId] that has never been journaled (upgrades, re-keying). */
@@ -186,7 +201,13 @@ class Journal(private val database: LocalDatabase) {
         val state = loadState(table.name, id)
         val result = FieldMerge.receive(state, hlc, writes.filter { table.type(it.column) != null && it.column !in table.localOnlyColumns })
         saveState(table.name, id, result.state)
-        if (result.changed.isNotEmpty()) writeRow(table, id, result.state, result.changed)
+        if (result.changed.isNotEmpty()) {
+            // A merged row the database refuses (halves of a linked pair from phones running a
+            // version that sent them separately) must not abort the whole file: SQLite undoes only
+            // the failed statement. This phone keeps its row and the record is flagged for review.
+            val written = runCatching { writeRow(table, id, result.state, result.changed) }.isSuccess
+            if (!written) return recordUnappliable(table, id, collectionId, result.changed)
+        }
         if (result.fastForwarded.isNotEmpty()) {
             database.local.openConflictFor(table.name, id).executeAsOneOrNull()?.let { open ->
                 val columns = runCatching { json.parseToJsonElement(open.local_payload) as JsonObject }.getOrNull()?.keys.orEmpty()
@@ -208,6 +229,18 @@ class Journal(private val database: LocalDatabase) {
             id = database.newId(), entity = table.name, entity_id = id, collection_id = collectionId,
             local_payload = mergedLost.toString(), server_payload = mergedKept.toString(),
             reason = "Changed on two phones before they synced", detected_at = database.now(),
+        )
+        return 1
+    }
+
+    private fun recordUnappliable(table: SyncTable, id: String, collectionId: String, changed: Map<String, SyncValue>): Int {
+        database.local.openConflictFor(table.name, id).executeAsOneOrNull()?.let { database.local.resolveConflict(database.now(), it.id) }
+        val other = buildJsonObject { changed.forEach { (column, value) -> put(column, fromValue(value)) } }
+        database.local.insertConflict(
+            id = database.newId(), entity = table.name, entity_id = id, collection_id = collectionId,
+            local_payload = other.toString(), server_payload = null,
+            reason = "A change from another phone doesn't fit with a change made here, so this phone kept its own values. Check this record on both phones.",
+            detected_at = database.now(),
         )
         return 1
     }
@@ -300,6 +333,15 @@ class Journal(private val database: LocalDatabase) {
 
         /** Bookkeeping fields that change with every edit; independent writes to them aren't worth reporting. */
         val QUIET_COLUMNS = setOf("updated_at", "created_at", "producer_sort")
+
+        /** Per table, the groups of columns a CHECK constraint ties together (see 1.sqm). */
+        val LINKED_COLUMNS: Map<String, List<Set<String>>> = mapOf(
+            "vintage" to listOf(setOf("vintage_kind", "year"), setOf("drink_from", "drink_until")),
+            "location" to listOf(setOf("grid_rows", "grid_cols")),
+            "lot" to listOf(setOf("unit_price_minor", "unit_price_currency")),
+            "wishlist_item" to listOf(setOf("target_price_minor", "target_price_currency"), setOf("vintage_id", "wine_id", "producer")),
+            "merchant_link" to listOf(setOf("last_price_minor", "last_price_currency")),
+        )
 
         fun toValue(e: JsonElement?): SyncValue = when {
             e == null || e is JsonNull -> SyncValue.Null

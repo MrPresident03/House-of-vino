@@ -103,6 +103,11 @@ class ImportExportTest {
         assertEquals(listOf("purchase", "sell"), financial.rows.map { it[1] }) // reversed sale excluded
         assertEquals("1200.00", financial.rows[0][8])
         assertEquals("600.00", financial.rows[1][8])
+        assertEquals("2020-01-01", financial.rows[0][0]) // purchases use the lot's purchase date, not when it was entered
+        assertEquals("2025-10-09", financial.rows[1][0])
+        val shifted = Csv.read(app.exporter.financialCsv(c, utcOffsetMinutes = 16 * 60))
+        assertEquals("2020-01-01", shifted.rows[0][0])
+        assertEquals("2025-10-10", shifted.rows[1][0])
     }
 
     @Test

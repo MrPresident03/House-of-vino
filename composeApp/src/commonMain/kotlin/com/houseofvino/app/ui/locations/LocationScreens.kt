@@ -308,7 +308,7 @@ class LocationEditorViewModel(graph: AppGraph, private val locationId: String?, 
         val c = if (hasGrid.value) cols.value.toIntOrNull() else null
         if (hasGrid.value && (r == null || c == null || r !in 1..200 || c !in 1..200)) { _error.value = "Rows and positions must be between 1 and 200"; return }
         val input = LocationInput(name.value, kind.value, parent.value, r, c, 0, notes.value)
-        launchIo(onError = { _error.value = it.userMessage() }) {
+        launchIoOnce(onError = { _error.value = it.userMessage() }) {
             val id = io { if (locationId == null) graph.locations.create(collectionId, input) else { graph.locations.update(locationId, input); locationId } }
             _saved.value = id
         }
@@ -329,6 +329,7 @@ fun LocationEditorScreen(locationId: String?, parentId: String?, onBack: () -> U
     val nodes by vm.nodes.collectAsState()
     val error by vm.error.collectAsState()
     val saved by vm.saved.collectAsState()
+    val submitting by vm.submitting.collectAsState()
     LaunchedEffect(saved) { saved?.let(onSaved) }
     Column(Modifier.fillMaxSize()) {
         HvTopBar(if (locationId == null) "Add location" else "Edit location", onBack = onBack)
@@ -352,7 +353,7 @@ fun LocationEditorScreen(locationId: String?, parentId: String?, onBack: () -> U
             }
             HvTextField(notes, { vm.notes.value = it }, "Notes", singleLine = false, minLines = 2)
             error?.let { Text(it, color = Hv.colors.danger, style = Hv.type.bodyDense) }
-            HvButton("Save", vm::save, Modifier.fillMaxWidth().padding(vertical = 16.dp))
+            HvButton("Save", vm::save, Modifier.fillMaxWidth().padding(vertical = 16.dp), enabled = !submitting)
         }
     }
 }

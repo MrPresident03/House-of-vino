@@ -257,10 +257,10 @@ class ExportService(private val database: LocalDatabase, private val locations: 
     }
 
     /** Purchases, sales, gifts and valuations. Amounts stay in their original currencies. */
-    fun financialCsv(collectionId: String): String {
+    fun financialCsv(collectionId: String, utcOffsetMinutes: Int = 0): String {
         val movements = query("""
             SELECT m.occurred_at, m.kind, w.producer, w.name, v.vintage_kind, v.year, l.format_ml, m.delta,
-                   l.unit_price_minor, l.unit_price_currency, m.amount_minor, m.amount_currency, m.counterparty, l.source, m.note, m.id
+                   l.unit_price_minor, l.unit_price_currency, m.amount_minor, m.amount_currency, m.counterparty, l.source, m.note, m.id, l.acquired_on
             FROM movement m JOIN lot l ON l.id = m.lot_id JOIN vintage v ON v.id = l.vintage_id JOIN wine w ON w.id = v.wine_id
             WHERE m.collection_id = ? AND m.kind IN ('PURCHASE', 'SELL', 'GIFT_OUT', 'GIFT_IN', 'LOSS')
               AND m.id NOT IN (SELECT reversal_of FROM movement WHERE kind = 'REVERSAL' AND reversal_of IS NOT NULL)
@@ -271,7 +271,9 @@ class ExportService(private val database: LocalDatabase, private val locations: 
             val unitCost = money(c.getLong(8), c.getString(9))
             val amount = money(c.getLong(10), c.getString(11))
             Exports.FinancialRow(
-                date = com.houseofvino.core.time.IsoDate.fromEpochMillis(c.getLong(0)!!).toString(),
+                // A purchase is dated by the lot's purchase date; its movement is stamped when it was entered.
+                date = (if (kind == "PURCHASE" || kind == "OPENING") c.getString(16)?.takeIf { it.isNotEmpty() } else null)
+                    ?: com.houseofvino.core.time.IsoDate.fromEpochMillis(c.getLong(0)!!, utcOffsetMinutes).toString(),
                 type = kind.lowercase().replace('_', ' '), producer = c.getString(2)!!, wine = c.getString(3),
                 vintage = VintageYear.fromStorage(c.getString(4)!!, c.getLong(5)?.toInt()).toString(), formatMl = c.getLong(6)!!.toInt(),
                 quantity = qty, unitAmount = if (kind == "PURCHASE") unitCost else amount?.allocate(qty)?.lastOrNull(),

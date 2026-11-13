@@ -62,6 +62,12 @@ class SearchEngineTest {
     }
 
     @Test
+    fun abbreviationsAreNotExpandedWhileTheLastWordIsBeingTyped() {
+        val s = add("Kanonkop", null, VintageYear.Year(2018), region = "Stellenbosch")
+        assertEquals(listOf(s), cellar("st").items.map { it.vintageId })
+    }
+
+    @Test
     fun correctsTyposWhenNothingMatches() {
         add("Château Margaux", null, VintageYear.Year(2015))
         add("Giacomo Conterno", "Barolo Monfortino", VintageYear.Year(2013))

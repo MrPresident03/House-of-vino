@@ -419,13 +419,14 @@ fun ErrorState(message: String, onRetry: (() -> Unit)?, modifier: Modifier = Mod
 }
 
 @Composable
-fun PermissionDenied(what: String, why: String, onOpenSettings: () -> Unit, onManual: (() -> Unit)?, modifier: Modifier = Modifier) {
+fun PermissionDenied(what: String, why: String, onOpenSettings: () -> Unit, onManual: (() -> Unit)?, modifier: Modifier = Modifier, onRetry: (() -> Unit)? = null) {
     Column(modifier.fillMaxWidth().padding(32.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         Text("$what access is off", style = Hv.type.sectionTitle, color = Hv.colors.ink)
         Spacer(Modifier.height(8.dp))
         Text(why, style = Hv.type.body, color = Hv.colors.inkMuted, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
         Spacer(Modifier.height(20.dp))
         HvButton("Open settings", onOpenSettings)
+        if (onRetry != null) { Spacer(Modifier.height(8.dp)); HvButton("Try again", onRetry, kind = ButtonKind.QUIET) }
         if (onManual != null) { Spacer(Modifier.height(8.dp)); HvButton("Enter details manually", onManual, kind = ButtonKind.QUIET) }
     }
 }

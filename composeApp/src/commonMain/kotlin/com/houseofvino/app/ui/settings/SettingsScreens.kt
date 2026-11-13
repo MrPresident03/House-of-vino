@@ -198,7 +198,7 @@ class RatesViewModel(graph: AppGraph) : GraphViewModel(graph) {
         val d = IsoDate.parseOrNull(asOf.value) ?: run { _error.value = "Use YYYY-MM-DD"; return }
         val er = runCatching { ExchangeRate(base.value, quote.value, r, d, source.value) }.getOrElse { _error.value = it.userMessage(); return }
         _error.value = null
-        launchIo { io { graph.settings.addRate(collectionId, er) }; rate.value = "" }
+        launchIoOnce(resetOnSuccess = true) { io { graph.settings.addRate(collectionId, er) }; rate.value = "" }
     }
 
     fun delete(id: String) = launchIo { io { graph.settings.deleteRate(id) } }
@@ -215,6 +215,7 @@ fun RatesScreen(onBack: () -> Unit) {
     val source by vm.source.collectAsState()
     val asOf by vm.asOf.collectAsState()
     val error by vm.error.collectAsState()
+    val submitting by vm.submitting.collectAsState()
     Column(Modifier.fillMaxSize()) {
         HvTopBar("Exchange rates", onBack = onBack)
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).imePadding().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -228,7 +229,7 @@ fun RatesScreen(onBack: () -> Unit) {
             HvTextField(source, { vm.source.value = it }, "Source", placeholder = "e.g. My bank, ECB reference rate")
             DateField("As of", asOf, { vm.asOf.value = it }, null)
             error?.let { Text(it, color = Hv.colors.danger, style = Hv.type.bodyDense) }
-            HvButton("Add rate", vm::add, Modifier.fillMaxWidth())
+            HvButton("Add rate", vm::add, Modifier.fillMaxWidth(), enabled = !submitting)
             rates.forEach { (id, r) ->
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
